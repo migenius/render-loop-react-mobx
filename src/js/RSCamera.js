@@ -87,14 +87,20 @@ export default class RSCamera {
 	/**
 	 * Sets the matrix of the transform from anything that Matrix4x4.setFromObject supports.
 	 */ 
-	setTransformFromObject(matrix)
+	set matrix(value)
 	{
-		if(null != matrix)
+		if(null != value)
 		{
-			this.m_transform.worldToObj = matrix;
+			this.m_transform.worldToObj = value;
 			this.attributeChange("transform", this.m_transform.worldToObj, null);
 		}
 	}
+
+	get matrix()
+	{
+		return this.m_transform.worldToObj;
+	}
+
 	/**
 	 * Sets the camera data from either an object with appropriate properties
 	 * or from another RSCamera instance.
@@ -110,19 +116,19 @@ export default class RSCamera {
 			else
 			{
 				if(typeof(camera.orthographic) != "undefined")
-					this.setOrthographic(camera.orthographic);
+					this.orthographic = camera.orthographic;
 					
 				if(typeof(camera.focal) != "undefined")
-					this.setFocal(camera.focal);
+					this.focal = camera.focal;
 					
 				if(typeof(camera.aperture) != "undefined")
-					this.setAperture(camera.aperture);
+					this.aperture = camera.aperture;
 					
 				if(typeof(camera.clip_max) != "undefined")
-					this.setClipMax(camera.clip_max);
+					this.clipMax = camera.clip_max;
 					
 				if(typeof(camera.clip_min) != "undefined")
-					this.setClipMin(camera.clip_min);
+					this.clipMin = camera.clip_min;
 			}
 		}
 	}
@@ -134,13 +140,13 @@ export default class RSCamera {
 	 */
 	setFromCamera(camera)
 	{
-		this.setTransform(camera.getTransform().clone());                 
-		this.setAperture(camera.getAperture());
-		this.setFocal(camera.getFocal());
-		this.setOrthographic(camera.getOrthographic());
-		this.setClipMax(camera.getClipMax());
-		this.setClipMin(camera.getClipMin());
-		this.setSceneUpDirection(camera.getSceneUpDirection());
+		this.transform = camera.transform.clone();                 
+		this.aperture = camera.aperture;
+		this.focal = camera.focal;
+		this.orthographic =camera.orthographic;
+		this.clipMax = camera.clipMax;
+		this.clipMin = camera.clipMin;
+		this.sceneUpDirection = camera.sceneUpDirection;
 	}
 
 	/**
@@ -170,11 +176,11 @@ export default class RSCamera {
 		if (shiftTargetPoint != true)
 			shiftTargetPoint = false;
 			
-		if(this.getOrthographic())
+		if(this.orthographic)
 		{
 			if(this.m_aperture + depth > 0)
 			{
-				this.setAperture(this.getAperture() + depth);
+				this.aperture = this.aperture + depth;
 			}
 		}
 		else
@@ -335,7 +341,7 @@ export default class RSCamera {
 	 */
 	transformPoint(point, result)
 	{
-		var world2Cam = this.getTransform().worldToObj;
+		var world2Cam = this.transform.worldToObj;
 		result.setFromVector(point)
 		result.transform(world2Cam);
 		return true;
@@ -350,7 +356,7 @@ export default class RSCamera {
 	 */
 	transformDirection(direction, result)
 	{
-		var world2Cam = this.getTransform().worldToObj;
+		var world2Cam = this.transform.worldToObj;
 		var myDir = direction.clone();
 		result.setFromVector(myDir.rotate(world2Cam));
 		return true;
@@ -365,7 +371,7 @@ export default class RSCamera {
 	 */
 	transformDirectionToWorld(direction, result)
 	{
-		var cam2World = this.getTransform().worldToObj.clone();
+		var cam2World = this.transform.worldToObj.clone();
 		var myDir = direction.clone();
 		cam2World.invert();
 		result.setFromVector(myDir.rotateTranspose(cam2World));
@@ -386,12 +392,12 @@ export default class RSCamera {
 			
 		var result = false;
 
-		if ((this.getAperture() == rhs.getAperture()) &&
-			(this.getFocal() == rhs.getFocal()) &&
-			(this.getFieldOfView() == rhs.getFieldOfView()))
+		if (this.aperture == rhs.aperture &&
+			this.focal == rhs.focal &&
+			this.fieldOfView == rhs.fieldOfView)
 			{
-				var matrix1 = this.getTransform().worldToObj;
-				var matrix2 = rhs.getTransform().worldToObj; 
+				var matrix1 = this.transform.worldToObj;
+				var matrix2 = rhs.transform.worldToObj; 
 
 				if( Matrix4x4.equalWithTolerance(matrix1,matrix2) == true)
 					result = true;
@@ -413,12 +419,12 @@ export default class RSCamera {
 	levelCamera()
 	{
 		// Negative angle to the horizon based on the up vector.
-		var angle = Math.asin(this.getDirection().dot(this.m_transform.getDefaultUpDirection()));
+		var angle = Math.asin(this.direction.dot(this.m_transform.getDefaultUpDirection()));
 		this.m_transform.rotate(-angle, 0, 0);
 		attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
-	getOrthographic()
+	get orthographic()
 	{
 		return this.m_orthographic;
 	}
@@ -427,7 +433,7 @@ export default class RSCamera {
 	 * 
 	 * @param ortho Set to true to enable orthographic mode.
 	 */  
-	setOrthographic(ortho)
+	set orthographic(ortho)
 	{
 		if(ortho != this.m_orthographic)
 		{
@@ -437,17 +443,17 @@ export default class RSCamera {
 	}
 
 	/**
-	 * Retrieves the field of view of the camera.
+	 * Retrieves the half field of view of the camera.
 	 * 
-	 * @return The field of view.
+	 * @return The half field of view.
 	 */
-	getFieldOfView()
+	get fieldOfView()
 	{
 		if(this.m_orthographic)
 		{
 			return -1;
 		}
-		return Math.atan2(this.getAperture() / 2, this.getFocal());
+		return Math.atan2(this.aperture / 2, this.focal);
 	}
 
 	/**
@@ -455,23 +461,23 @@ export default class RSCamera {
 	 * 
 	 * @param halfFov The desired field of view divided by two in radians.
 	 */
-	setFieldOfView(halfFov)
+	set fieldOfView(halfFov)
 	{
 		if(false == this.m_orthographic)
 		{
-			this.setAperture((this.m_focal * Math.tan(halfFov))*2);
+			this.aperture = (this.m_focal * Math.tan(halfFov))*2;
 		}
 	}
 
 	/**
 	 * The aperture of the camera.
 	 */   
-	getAperture()
+	get aperture()
 	{
 		return this.m_aperture;
 	}
 
-	setAperture(aperture)
+	set aperture(aperture)
 	{
 		if(isNaN(aperture))
 		{	
@@ -493,12 +499,12 @@ export default class RSCamera {
 	/**
 	 * The focal length of the camera.
 	 */
-	getFocal()
+	get focal()
 	{
 		return this.m_focal;
 	}
 
-	setFocal(focal)
+	set focal(focal)
 	{
 		var oldValue = this.m_focal;
 		this.m_focal = focal;
@@ -508,12 +514,12 @@ export default class RSCamera {
 	/**
 	 * The transform of the camera.
 	 */
-	getTransform()
+	get transform()
 	{
 		return this.m_transform;
 	}
 
-	setTransform(transform)
+	set transform(transform)
 	{
 		if(transform != this.m_transform)
 		{
@@ -525,12 +531,12 @@ export default class RSCamera {
 	/**
 	* The clip max of the view frustum
 	*/
-	getClipMax()
+	get clipMax()
 	{
 		return this.m_clip_max;
 	}
 
-	setClipMax(clipMax)
+	set clipMax(clipMax)
 	{
 		var oldValue = this.m_clip_max;
 		this.m_clip_max = clipMax;
@@ -540,12 +546,12 @@ export default class RSCamera {
 	/**
 	 * The clip min of the view frustum
 	 */
-	getClipMin()
+	get clipMin()
 	{
 		return this.m_clip_min;
 	}
 
-	setClipMin(clipMin)
+	set clipMin(clipMin)
 	{
 		var oldValue = this.m_clip_min;
 		this.m_clip_min = clipMin;
@@ -566,6 +572,7 @@ export default class RSCamera {
 		if(this.m_transform.getFollowTargetPoint())
 			this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
+
 	getTargetPoint()
 	{
 		return this.m_transform.getTargetPoint();
@@ -574,7 +581,7 @@ export default class RSCamera {
 	/**
 	 * The look direction vector of the camera.
 	 */
-	getDirection()
+	get direction()
 	{
 		return this.m_transform.ZAxis;
 	}
@@ -582,7 +589,7 @@ export default class RSCamera {
 	/**
 	 * The up vector of the camera.
 	 */
-	getUp()
+	get up()
 	{
 		return this.m_transform.YAxis;
 	}
@@ -590,7 +597,7 @@ export default class RSCamera {
 	/**
 	 * The right vector of the camera.
 	 */
-	getRight()
+	get right()
 	{
 		return this.m_transform.XAxis;
 	}
@@ -607,7 +614,7 @@ export default class RSCamera {
 	/**
 	 * The position of the camera in world space.
 	 */
-	getLocation()
+	get location()
 	{
 		return this.m_transform.translation;
 	}
@@ -616,7 +623,7 @@ export default class RSCamera {
 	 * The up direction of the scene the camera is in.
 	 * Can be either Y_UP or Z_UP.
 	 */
-	setSceneUpDirection(upDir)
+	set sceneUpDirection(upDir)
 	{
 		if(this.m_scene_up_direction != upDir)
 		{
@@ -630,17 +637,17 @@ export default class RSCamera {
 		}
 	}
 
-	getSceneUpDirection()
+	get sceneUpDirection()
 	{
 		return this.m_scene_up_direction;
 	}
 
-	setFollowTargetPoint(follow)
+	set followTargetPoint(follow)
 	{
-		var oldValue = this.getTransform().getFollowTargetPoint();
+		var oldValue = this.transform.getFollowTargetPoint();
 		if(oldValue != follow)
 		{
-			this.getTransform().setFollowTargetPoint(follow);
+			this.transform.setFollowTargetPoint(follow);
 			this.attributeChange("follow_target_point", follow, oldValue);
 			if(follow)
 			{
@@ -648,9 +655,9 @@ export default class RSCamera {
 			}
 		}
 	}
-	getFollowTargetPoint()
+	get followTargetPoint()
 	{
-		return this.getTransform().getFollowTargetPoint();
+		return this.transform.getFollowTargetPoint();
 	}
 
 	// --------------------------------------------------
