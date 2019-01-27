@@ -744,13 +744,13 @@ export default class RealityServerModel {
         // this is what should be used.
 
         if (this.service.connectorName == 'WS') {
-            this.service.update_camera(this.renderLoopName,{camera_instance: { name: this.cameraInstanceName, transform: this.camera.getTransform().getWorldToObj() }});
+            this.service.update_camera(this.renderLoopName,{camera_instance: { name: this.cameraInstanceName, transform: this.camera.getTransform().worldToObj }});
         } else {
             // Add the command that sets the camera instance transform
             // to the most recent value. Note that this command must be
             // added to the supplied ICommandSequence instance, not by
             // using service.addCommand().
-            seq.addCommand(new Command("instance_set_world_to_obj", {instance_name:this.cameraInstanceName, transform:this.camera.getTransform().getWorldToObj()}));
+            seq.addCommand(new Command("instance_set_world_to_obj", {instance_name:this.cameraInstanceName, transform:this.camera.getTransform().worldToObj}));
             seq.addCommand(new Command("render_loop_cancel_render", {render_loop_name:this.renderLoopName, cancel_level: 1}));
         }
         //renderIsConverged = false;
