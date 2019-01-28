@@ -6,15 +6,15 @@ import Header from "./components/Header";
 import Content from "./components/Content";
 import Footer from "./components/Footer";
 import RenderLoopModel from "./models/RenderLoopModel";
-import RealityServerModel from "./models/RealityServerModel";
+import RealityServerService from "./services/RealityServerService";
 import './styles/migenius.css';
 
 class RenderLoopDemo extends React.Component {
 
   constructor(props) {
     super(props);
-    this.state = new RenderLoopModel();
-    this.RS = new RealityServerModel(this.state);
+    this.RS = new RealityServerService();
+    this.state = new RenderLoopModel(this.RS.state);
   }
 
   render() {
@@ -23,7 +23,7 @@ class RenderLoopDemo extends React.Component {
 	    <DevTools />
 	    <Header />
 	    <Content state={this.state} RS={this.RS} />
-	    <Footer state={this.state} />
+	    <Footer state={this.RS.state} />
 	  </div>
     );
   }

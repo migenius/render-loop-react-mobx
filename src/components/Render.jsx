@@ -48,30 +48,30 @@ class Render extends React.Component {
 
     // when we have 1 image display the render view
     when(
-      () => this.props.state.imageRendered.count == 1,
+      () => this.props.RS.state.imageRendered.count == 1,
       () => this.showRender = true
     );
 
     // update render statistics
     autorun( reaction => {
-      if (this.props.state.imageRendered.data) {
-        if (this.props.state.imageRendered.data.result == 1) {
-          if (this.props.state.imageRendered.source === 'WS') {
+      if (this.props.RS.state.imageRendered.data) {
+        if (this.props.RS.state.imageRendered.data.result == 1) {
+          if (this.props.RS.state.imageRendered.source === 'WS') {
             this.props.state.status = 'Render converged, waiting for images from web sockets.';            
           } else {
             this.props.state.status = 'Render converged, local render loop paused.';
           }
-        } else if (typeof this.props.state.imageRendered.data.statistics !== 'undefined') {
+        } else if (typeof this.props.RS.state.imageRendered.data.statistics !== 'undefined') {
           let msg;
-          if (typeof this.props.state.imageRendered.data.statistics.iteration !== 'undefined') {
-            msg = "Server pushing images via web sockets (" + this.props.state.imageRendered.data.statistics.iteration + " iterations)";
-            if (this.props.state.imageRendered.data.statistics.fps) {
-              msg += " (" + this.props.state.imageRendered.data.statistics.fps.toFixed(2) + " fps).";
+          if (typeof this.props.RS.state.imageRendered.data.statistics.iteration !== 'undefined') {
+            msg = "Server pushing images via web sockets (" + this.props.RS.state.imageRendered.data.statistics.iteration + " iterations)";
+            if (this.props.RS.state.imageRendered.data.statistics.fps) {
+              msg += " (" + this.props.RS.state.imageRendered.data.statistics.fps.toFixed(2) + " fps).";
             } else {
               msg += ".";
             }
-          } else if (this.props.state.imageRendered.data.statistics.fps) {
-             msg = 'Fetching renders from server at up to ' + this.props.state.imageRendered.data.statistics.fps.toFixed(2) + ' fps.';
+          } else if (this.props.RS.state.imageRendered.data.statistics.fps) {
+             msg = 'Fetching renders from server at up to ' + this.props.RS.state.imageRendered.data.statistics.fps.toFixed(2) + ' fps.';
           }
           if (msg) {
             this.props.state.status = msg;
@@ -147,9 +147,9 @@ class Render extends React.Component {
     try {
       const picked = await this.props.RS.pick(click_x,click_y);
       if (picked) {
-        this.props.state.outlined = [ picked[0].picked_object_instance ];
+        this.props.RS.state.outlined = [ picked[0].picked_object_instance ];
       } else {
-        this.props.state.outlined.clear();
+        this.props.RS.state.outlined.clear();
       }
     } catch (e) {
 

@@ -1,6 +1,8 @@
 import { observable, computed, action, autorun } from "mobx";
 import {BatchCommand,Command,GenericRenderCommand,ImageRenderTarget,RenderLoopStateData,RSService,StateData,WebSocketStreamer} from "com/mi/rs/index.js";
 import RSCamera from "../js/RSCamera";
+import RealityServerState from "./RealityServerState";
+
 /*
 function Promisify(thing,func) {
     const orig = thing.prototype[func];
@@ -170,7 +172,7 @@ class ImgRenderDisplay {
     }
 }
 
-export default class RealityServerModel {
+export default class RealityServerService {
 
     /** The RealityServer Service object */
     service = undefined;
@@ -226,8 +228,8 @@ export default class RealityServerModel {
     /** pick request ID */
     pickRequest = 0;
 
-	constructor(state) {
-		this.state = state;
+	constructor() {
+		this.state = new RealityServerState();
 
 		this.state.status = "Initializing application...";
 

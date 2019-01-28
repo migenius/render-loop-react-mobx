@@ -16,8 +16,8 @@ class ContentHeader extends React.Component {
         </div>
         <div id="renderer">
           <span className='status'>Renderer:&nbsp;</span>
-          <select id="renderer_select" onChange={(e) => this.rendererChange(e)} value={this.props.state.renderer}>
-              {this.props.state.renderers.map(renderer => <option key={'renderer_'+renderer}>{renderer}</option>)}
+          <select id="renderer_select" onChange={(e) => this.rendererChange(e)} value={this.props.RS.state.renderer}>
+              {this.props.RS.state.renderers.map(renderer => <option key={'renderer_'+renderer}>{renderer}</option>)}
             </select>
         </div>
       </div>
@@ -25,7 +25,7 @@ class ContentHeader extends React.Component {
   }
 
   rendererChange(event) {
-    this.props.state.renderer = event.target.value;
+    this.props.RS.state.renderer = event.target.value;
   }
 
 }
