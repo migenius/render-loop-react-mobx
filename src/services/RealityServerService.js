@@ -353,7 +353,7 @@ export default class RealityServerService {
             this.service.connect((this.state.secure ? "wss://" : "ws://")+this.state.host+":"+this.state.port+"/render_loop_stream/",
                 () => {
                     this.state.status = "Web Socket streamer connected, loading scene.";
-                    
+                    this.state.connection_status = 'connected';
                     // Uncomment below to enable debug mode where WebSocket commands are
                     // sent using text rather than binary. This can be helpful when
                     // trying to debug command sequences.
@@ -432,6 +432,7 @@ export default class RealityServerService {
         {
             if(resp.error.code == RSService.CLIENT_SIDE_ERROR_CODE_CONNECTION) {
                 this.state.status = "Failed to initialize application. No connection to server.";
+                this.state.connection_status = 'failed';
                 this.state.host = undefined;
             } else {
                 this.state.status = "Failed to initialize application. " + resp.error.message;

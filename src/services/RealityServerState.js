@@ -9,6 +9,7 @@ export default class RealityServerState {
   @observable renderer = undefined;
   @observable status = '';
   @observable connection_error = undefined;
+  @observable connection_status = 'pending';
   @observable outlined = [];
 
   /** Updates whenever an image is rendered */

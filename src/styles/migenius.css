@@ -38,6 +38,26 @@ h1
     color:#5F5F5F;
 }
 
+.circle:before {
+  content: '\2B24';
+}
+
+.lock:before {
+  content: ' \1F512';
+}
+
+.pending {
+    color: orange;
+}
+
+.connected {
+    color: green;
+}
+
+.failed {
+    color: red;
+}
+
 #renderer
 {
     flex-grow:1;

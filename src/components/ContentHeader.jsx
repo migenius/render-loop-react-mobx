@@ -12,7 +12,7 @@ class ContentHeader extends React.Component {
     return (
       <div id="content_header">
         <div id="serviceurl">
-          {this.props.state.connection_status}
+          <span className={`circle ${this.props.RS.state.connection_status}`}/> {this.props.state.connection_status} <span className={this.props.RS.state.secure ? 'lock':''}/>
         </div>
         <div id="renderer">
           <span className='status'>Renderer:&nbsp;</span>
