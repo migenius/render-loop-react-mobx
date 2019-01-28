@@ -1,4 +1,4 @@
-import { observable, computed, action } from "mobx";
+import { observable } from "mobx";
 
 export default class RealityServerState {
 

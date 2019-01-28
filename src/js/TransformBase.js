@@ -2,6 +2,7 @@
  * Copyright 2010-2019 migenius pty ltd, Australia. All rights reserved. 
  *****************************************************************************/
 import {Vector4,Matrix4x4} from "com/mi/rs/index.js";
+import {observable,computed,action} from "mobx";
 
 /**
  * @file TransformBase.js
@@ -18,16 +19,22 @@ import {Vector4,Matrix4x4} from "com/mi/rs/index.js";
  */
 export default class TransformBase
 {
+	@observable
 	m_translation;
 				
+	@observable
 	m_x_axis;
+	
+	@observable
 	m_y_axis;
+	
+	@observable
 	m_z_axis;
 
+	@observable
 	m_scale;
 
-	m_world_to_obj;
-				
+	@observable		
 	m_dirty_matrix;
 
 	static X_AXIS = new Vector4([1, 0, 0]);
@@ -47,8 +54,6 @@ export default class TransformBase
 
 		this.m_scale = new Vector4([1, 1, 1]);
 
-		this.m_world_to_obj = new Matrix4x4();
-
 		this.m_dirty_matrix = true;
 	}
 
@@ -59,7 +64,7 @@ export default class TransformBase
 	clone()
 	{
 		var transform = new TransformBase();
-		this._populateClone(transform);
+		this.populateClone(transform);
 
 		return transform;
 	}
@@ -71,7 +76,7 @@ export default class TransformBase
 	 */
 	populateClone(clone)
 	{
-		clone.m_world_to_obj.setFromMatrix(this.m_world_to_obj);
+		//clone.m_world_to_obj.setFromMatrix(this.m_world_to_obj);
 
 		clone.m_translation.setFromVector(this.m_translation);
 		clone.m_z_axis.setFromVector(this.m_z_axis);
@@ -81,12 +86,62 @@ export default class TransformBase
 		clone.m_dirty_matrix = this.m_dirty_matrix;
 	}
 
+	deriveWorldToObj(x_axis,y_axis,z_axis,translation,scale)
+	{
+		const world_to_obj = new Matrix4x4();;
+
+		world_to_obj.xx = x_axis.x;
+		world_to_obj.yx = x_axis.y;
+		world_to_obj.zx = x_axis.z;
+
+		world_to_obj.xy = y_axis.x;
+		world_to_obj.yy = y_axis.y;
+		world_to_obj.zy = y_axis.z;
+
+		world_to_obj.xz = z_axis.x;
+		world_to_obj.yz = z_axis.y;
+		world_to_obj.zz = z_axis.z;
+
+		var c = new Vector4();
+
+		c.x = world_to_obj.xx;
+		c.y = world_to_obj.yx;
+		c.z = world_to_obj.zx;
+		world_to_obj.wx = -1 * translation.dot(c);
+
+		c.x = world_to_obj.xy;
+		c.y = world_to_obj.yy;
+		c.z = world_to_obj.zy;
+		world_to_obj.wy = -1 * translation.dot(c);
+
+		c.x = world_to_obj.xz;
+		c.y = world_to_obj.yz;
+		c.z = world_to_obj.zz;
+		world_to_obj.wz = -1 * translation.dot(c);
+
+		world_to_obj.xx /= scale.x;
+		world_to_obj.yx /= scale.x;
+		world_to_obj.zx /= scale.x;
+		world_to_obj.wx /= scale.x;
+
+		world_to_obj.xy /= scale.y;
+		world_to_obj.yy /= scale.y;
+		world_to_obj.zy /= scale.y;
+		world_to_obj.wy /= scale.y;
+
+		world_to_obj.xz /= scale.z;
+		world_to_obj.yz /= scale.z;
+		world_to_obj.zz /= scale.z;
+		world_to_obj.wz /= scale.z;
+		return world_to_obj;
+	}
 	/**
 	 * Calculates the location, direction and up from the current world_to_obj matrix.
 	 */
-	deriveVectors()
+	@action
+	deriveVectors(worldToObj)
 	{
-		var obj_to_world = this.m_world_to_obj.clone();
+		var obj_to_world = new Matrix4x4(worldToObj);
 		obj_to_world.invert();
 
 		this.m_translation.setElements();
@@ -106,61 +161,6 @@ export default class TransformBase
 	}
 
 	/**
-	 * When the transform is dirty a new world_to_obj matrix is calculated
-	 * and the transform is cleaned. This can be called at anytime however.
-	 */
-	deriveWorldToObj()
-	{
-		this.m_world_to_obj.setIdentity();
-
-		this.m_world_to_obj.xx = this.m_x_axis.x;
-		this.m_world_to_obj.yx = this.m_x_axis.y;
-		this.m_world_to_obj.zx = this.m_x_axis.z;
-
-		this.m_world_to_obj.xy = this.m_y_axis.x;
-		this.m_world_to_obj.yy = this.m_y_axis.y;
-		this.m_world_to_obj.zy = this.m_y_axis.z;
-
-		this.m_world_to_obj.xz = this.m_z_axis.x;
-		this.m_world_to_obj.yz = this.m_z_axis.y;
-		this.m_world_to_obj.zz = this.m_z_axis.z;
-
-		var c = new Vector4();
-
-		c.x = this.m_world_to_obj.xx;
-		c.y = this.m_world_to_obj.yx;
-		c.z = this.m_world_to_obj.zx;
-		this.m_world_to_obj.wx = -1 * this.m_translation.dot(c);
-
-		c.x = this.m_world_to_obj.xy;
-		c.y = this.m_world_to_obj.yy;
-		c.z = this.m_world_to_obj.zy;
-		this.m_world_to_obj.wy = -1 * this.m_translation.dot(c);
-
-		c.x = this.m_world_to_obj.xz;
-		c.y = this.m_world_to_obj.yz;
-		c.z = this.m_world_to_obj.zz;
-		this.m_world_to_obj.wz = -1 * this.m_translation.dot(c);
-
-		this.m_world_to_obj.xx /= this.m_scale.x;
-		this.m_world_to_obj.yx /= this.m_scale.x;
-		this.m_world_to_obj.zx /= this.m_scale.x;
-		this.m_world_to_obj.wx /= this.m_scale.x;
-
-		this.m_world_to_obj.xy /= this.m_scale.y;
-		this.m_world_to_obj.yy /= this.m_scale.y;
-		this.m_world_to_obj.zy /= this.m_scale.y;
-		this.m_world_to_obj.wy /= this.m_scale.y;
-
-		this.m_world_to_obj.xz /= this.m_scale.z;
-		this.m_world_to_obj.yz /= this.m_scale.z;
-		this.m_world_to_obj.zz /= this.m_scale.z;
-		this.m_world_to_obj.wz /= this.m_scale.z;
-
-		this.m_dirty_matrix = false;
-	}
-
-	/**
 	 * Allows for the transform to be set directly from a given Matrix4x4.
 	 * 
 	 * @param worldToObj The matrix to set the transform to. While it is an object
@@ -168,22 +168,21 @@ export default class TransformBase
 	 */
 	set worldToObj(worldToObj)
 	{
-		this.m_world_to_obj.setFromObject(worldToObj);
-		this.m_dirty_matrix = false;
-		this.deriveVectors();
+		//this.m_world_to_obj.setFromObject(worldToObj);
+		//this.m_dirty_matrix = false;
+		this.deriveVectors(worldToObj);
 	}
+
+	@computed
 	get worldToObj()
 	{
-		if(this.m_dirty_matrix)
-		{
-			this.deriveWorldToObj();
-		}
-		return this.m_world_to_obj;
+		return this.deriveWorldToObj(this.m_x_axis,this.m_y_axis,this.m_z_axis,this.m_translation,this.m_scale);
 	}
 
 	/**
 	 * Sets the elements of the translation vector.
 	 */
+	@action
 	_setTranslation(x, y, z)
 	{
 		this.m_translation.setElements(x, y, z);
@@ -210,6 +209,7 @@ export default class TransformBase
 	/**
 	 * Sets the absolute values of the elements of the scaling vector.
 	 */
+	@action
 	_setScale(x, y, z)
 	{
 		this.m_scale.setElements(x, y, z);
@@ -219,6 +219,7 @@ export default class TransformBase
 	/**
 	 * Scales the transform scaling vector accumulatively.
 	 */
+	@action
 	_scale(dx, dy, dz)
 	{
 		this.m_scale.x *= dx;
@@ -236,6 +237,7 @@ export default class TransformBase
 	 * Translates a given vector in either world space or object space by {dx, dy, dz}.
 	 * This can be used by subclasses to 
 	 */
+	@action
 	_translateVector(dx, dy, dz, vector, inObjectSpace)
 	{
 		if (inObjectSpace == true)
@@ -260,9 +262,10 @@ export default class TransformBase
 		if (inObjectSpace != true)
 			inObjectSpace = false;
 			
-		var m = new com.mi.rs.types.Matrix4x4();
-		if(inObjectSpace)
+		var m = new Matrix4x4();
+		if(inObjectSpace) {
 			axis = axis.clone().rotateTranspose(this.worldToObj);
+		}
 
 		m.setRotation(axis, angle);
 		for(var i = 0; i < rotationVectors.length; i++)
@@ -275,6 +278,7 @@ export default class TransformBase
 	 * Rotates the transform around the current x axis by angle.
 	 * An optional array of vectors can be given that will also be rotated.
 	 */
+	@action
 	_rotateXVectors(axis, angle, rotationVectors, inObjectSpace)
 	{
 		var vectors = [this.m_y_axis, this.m_z_axis];
@@ -285,12 +289,14 @@ export default class TransformBase
 			inObjectSpace = false;
 
 		this._rotateVectors(axis, angle, vectors, inObjectSpace);
+		this.m_dirty_matrix = true;
 	}
 
 	/**
 	 * Rotates the transform around the current y axis by angle.
 	 * An optional array of vectors can be given that will also be rotated.
 	 */
+	@action
 	_rotateYVectors(axis, angle, rotationVectors, inObjectSpace)
 	{
 		var vectors = [this.m_x_axis, this.m_z_axis];
@@ -301,12 +307,14 @@ export default class TransformBase
 			inObjectSpace = false;
 
 		this._rotateVectors(axis, angle, vectors, inObjectSpace);
+		this.m_dirty_matrix = true;
 	}
 
 	/**
 	 * Rotates the transform around the current z axis by angle.
 	 * An optional array of vectors can be given that will also be rotated.
 	 */
+	@action
 	_rotateZVectors(axis, angle, rotationVectors, inObjectSpace)
 	{
 		var vectors = [this.m_x_axis, this.m_y_axis];
@@ -317,6 +325,7 @@ export default class TransformBase
 			inObjectSpace = false;
 
 		this._rotateVectors(axis, angle, vectors, inObjectSpace);
+		this.m_dirty_matrix = true;
 	}
 
 	/**
@@ -324,6 +333,7 @@ export default class TransformBase
 	 * If a setTranslation vector is given then the transform is also moved to that location,
 	 * otherwise the transform's translation will be unaffected.
 	 */
+	@action
 	_lookAtPoint(point, up, setTranslation)
 	{
 		if(setTranslation != null)

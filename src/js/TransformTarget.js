@@ -2,7 +2,8 @@
  * Copyright 2010-2019 migenius pty ltd, Australia. All rights reserved. 
  *****************************************************************************/
 import TransformBase from "./TransformBase";
-import {Vector4} from "com/mi/rs/index.js";
+import {Vector4,Matrix4x4} from "com/mi/rs/index.js";
+import {observable,computed,action} from "mobx";
 
 /**
  * @file TransformTarget.js
@@ -25,6 +26,7 @@ export default class TransformTarget extends TransformBase {
 	m_up_direction;
 
 	// So the target point is not the same as the translation.
+	@observable
 	m_target_point;
 
 	constructor() {
@@ -40,38 +42,22 @@ export default class TransformTarget extends TransformBase {
 		this.m_z_axis.z = -1;
 	}
 
-	deriveWorldToObj()
+	deriveVectors(value)
 	{
-		this.m_z_axis.scale(-1);
-		super.deriveWorldToObj();
+		super.deriveVectors(value);
 		this.m_z_axis.scale(-1);
 	}
 
-	deriveVectors()
-	{
-		super.deriveVectors();
-		this.m_z_axis.scale(-1);
-	}
-
+	@computed
 	get worldToObj()
 	{
-		if(this.m_dirty_matrix)
-		{
-			this.deriveWorldToObj();
-		}
-		return this.m_world_to_obj;
+		return this.deriveWorldToObj(this.m_x_axis,this.m_y_axis,this.m_z_axis.clone().scale(-1),this.m_translation,this.m_scale);
 	}
 
-	set worldToObj(worldToObj)
+	set worldToObj(value)
 	{
 		const dist = this.m_translation.distance(this.m_target_point);
-		
-		super.worldToObj = worldToObj;
-		/*
-		this.m_world_to_obj.setFromObject(worldToObj);
-		this.m_dirty_matrix = false;
-		this.deriveVectors();
-		*/
+		this.deriveVectors(value);
 		this.updateTargetPoint(dist);
 	}
 
@@ -93,6 +79,7 @@ export default class TransformTarget extends TransformBase {
 		transform.m_target_point.setFromVector(this.m_target_point);
 	}
 
+	@action
 	_lookAtPoint(point, up, setTranslation)
 	{
 		super._lookAtPoint(point, up, setTranslation);
@@ -102,6 +89,7 @@ export default class TransformTarget extends TransformBase {
 	/**
 	 * Short hand to look at the target point.
 	 */
+	@action
 	lookAtTargetPoint(resetYVector)
 	{
 		if(resetYVector == true)
@@ -165,6 +153,7 @@ export default class TransformTarget extends TransformBase {
 	/**
 	 * Sets if the target point will followed.
 	 */ 
+	@action
 	setFollowTargetPoint(follow)
 	{
 		this.m_follow_target_point = follow;
@@ -181,6 +170,7 @@ export default class TransformTarget extends TransformBase {
 	/**
 	 * Sets the target point. Target point CANNOT be ontop of the translation vector.
 	 */
+	@action
 	setTargetPoint(targetPoint, resetYVector)
 	{
 		if(targetPoint.equal(this.m_translation))
@@ -204,7 +194,8 @@ export default class TransformTarget extends TransformBase {
 			this.lookAtTargetPoint(resetYVector);
 		}
 	}
-	getTargetPoint()
+	@computed 
+	get targetPoint()
 	{
 		return this.m_target_point.clone();
 	}
@@ -213,6 +204,7 @@ export default class TransformTarget extends TransformBase {
 	 * Translates the target point by {dx, dy, dz} in either world space or object space.
 	 * Resulting target point CANNOT be ontop of translation vector.
 	 */
+	@action
 	translateTargetPoint(dx, dy, dz, inObjectSpace)
 	{
 		// Defaults to true.
@@ -236,6 +228,7 @@ export default class TransformTarget extends TransformBase {
 	 * Translates the transform by {dx, dy, dz} in either world space or object space.
 	 * Can also translate the target point by the same values.
 	 */
+	@action
 	translate(dx, dy, dz, inObjectSpace, translateTarget)
 	{
 		// Defaults to true.
@@ -263,6 +256,7 @@ export default class TransformTarget extends TransformBase {
 	 * Sets the translation to {x, y, z} in world space. If translateTarget is set then
 	 * the target point will retain it's relative position from the translation vector.
 	 */
+	@action
 	setTranslation(x, y, z, translateTarget)
 	{
 		// Defaults to true.
@@ -281,6 +275,7 @@ export default class TransformTarget extends TransformBase {
 		}
 	}
 
+	@action
 	_rotateYVectors(axis, angle, rotationVectors, inObjectSpace)
 	{
 		let vectors = [this.m_x_axis, this.m_y_axis, this.m_z_axis];
@@ -300,6 +295,7 @@ export default class TransformTarget extends TransformBase {
 	 * If it is set to false and we are following the target point then transform is only rotated by {0, 0, dz}
 	 * to keep the transform always looking at the target point.
 	 */
+	@action
 	rotate(dx, dy, dz, rotateTargetPoint)
 	{
 		// Default to true.
@@ -329,6 +325,7 @@ export default class TransformTarget extends TransformBase {
 	 * If it is set to false and we are following the target point then transform is only rotated by {0, 0, z}
 	 * to keep the transform always looking at the target point.
 	 */
+	@action
 	setRotation(x, y, z, rotateTargetPoint)
 	{
 		// Defaults to true.
@@ -350,6 +347,7 @@ export default class TransformTarget extends TransformBase {
 	 * then the axis will be transform into object space first. If rotateTargetPoint is set to true then the target point
 	 * is also rotated.
 	 */
+	@action
 	rotateAroundAxis(axis, angle, inObjectSpace, rotateTargetPoint)
 	{
 		if (inObjectSpace != false)
@@ -376,6 +374,7 @@ export default class TransformTarget extends TransformBase {
 	 * then the axis will be transform into object space first. If rotateTargetPoint is set to true then the target point
 	 * is also rotated.
 	 */
+	@action
 	setRotationAroundAxis(axis, angle, rotateTargetPoint)
 	{
 		if (rotateTargetPoint != false)
@@ -393,6 +392,7 @@ export default class TransformTarget extends TransformBase {
 	 * and the target point is not at the same location as the given point, then the target point is also rotated
 	 * around the point.
 	 */
+	@action
 	rotateAroundPoint(point, dx, dy, dz, rotateTargetPoint)
 	{
 		if (rotateTargetPoint != false)
@@ -410,7 +410,7 @@ export default class TransformTarget extends TransformBase {
 		
 		if(rotateTargetPoint)
 		{
-			to_target_point = this.getTargetPoint().subtract(point);
+			to_target_point = this.targetPoint.subtract(point);
 			rotate = [to_point, to_target_point];
 		}
 		else
@@ -441,6 +441,7 @@ export default class TransformTarget extends TransformBase {
 	/**
 	 * Short hand for rotating around the target point by {dx, dy, dz}.
 	 */
+	@action
 	orbitAroundTargetPoint(dx, dy, dz)
 	{
 		this.rotateAroundPoint(this.m_target_point, dx, dy, dz, false);

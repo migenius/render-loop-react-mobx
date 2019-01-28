@@ -639,16 +639,7 @@ export default class RealityServerService {
         // created the scene and affects navigation).
         this.camera.sceneUpDirection = this.sceneUpVector;
 
-        // The application is now ready to respond to user input.
-        // The code that handles user input and updates the camera
-        // is separated out into two navigator classes, one for
-        // simple dollying using the mouse wheel and one for orbiting
-        // the camera. These classes will modify the camera instance
-        // which will fire an event every time its transform changes.
-
-        // Listen for camera transform change events. This event will
-        // be triggered any time the camera is modified in such a way
-        // that its transform changes.
+            /*
         this.camera.addEventListener("transform_change", event => {
             // At this point we know that the client side camera
             // transform has changed and that the scene camera needs
@@ -680,7 +671,7 @@ export default class RealityServerService {
             // any commands added by this callback.
             this.service.addCallback( (seq) => this.updateCameraTransformCallback(seq));
         });;
-
+*/
         this.state.status = "Rendering using server side render loop...";
         this.service.addCommand(new Command("render_loop_start", {render_loop_name:this.renderLoopName, render_loop_handler_name:this.renderLoopHandlerName, scene_name: this.sceneName, render_loop_handler_parameters: [ "renderer", this.state.renderer ], timeout: this.state.renderLoopExpiryTime}),() => { this.startLocalRenderLoop() });
     }
@@ -704,6 +695,39 @@ export default class RealityServerService {
             this.localLoop = new ImgRenderDisplay(this);
         }
         this.localLoop.start();
+
+        // The application is now ready to respond to user input.
+        // The code that handles user input and updates the camera
+        // is separated out into two navigator classes, one for
+        // simple dollying using the mouse wheel and one for orbiting
+        // the camera. These classes will modify the camera instance
+        // which will fire an event every time its transform changes.
+
+        // Listen for camera transform change events. This event will
+        // be triggered any time the camera is modified in such a way
+        // that its transform changes.
+        autorun(reaction => {
+            this.service.addCallback( (seq) => {
+                // The service is now ready to process commands and it is
+                // time to generate an optimized sequence of commands that
+                // updated the camera transform. In this case this is very
+                // simple since the client side camera representation is
+                // keeping track of the most recent camera transform and
+                // this is what should be used.
+
+                if (this.service.connectorName == 'WS') {
+                    this.service.update_camera(this.renderLoopName,{camera_instance: { name: this.cameraInstanceName, transform: this.camera.matrix }});
+                } else {
+                    // Add the command that sets the camera instance transform
+                    // to the most recent value. Note that this command must be
+                    // added to the supplied ICommandSequence instance, not by
+                    // using service.addCommand().
+                    seq.addCommand(new Command("instance_set_world_to_obj", {instance_name:this.cameraInstanceName, transform:this.camera.matrix}));
+                    seq.addCommand(new Command("render_loop_cancel_render", {render_loop_name:this.renderLoopName, cancel_level: 1}));
+                }
+                this.localLoop.restart();
+            });
+        })
 
         // watch renderer
         autorun( reaction => {

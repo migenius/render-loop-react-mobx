@@ -3,8 +3,8 @@
  *****************************************************************************/
 import TransformTarget from "./TransformTarget";
 import TransformBase from "./TransformBase";
-import PropertyChangeEvent from "./PropertyChangeEvent";
-import {EventDispatcher,Matrix4x4} from "com/mi/rs/index.js";
+import {Matrix4x4} from "com/mi/rs/index.js";
+import {observable,computed,action} from "mobx";
 
 /**
  * @file RSCamera.js
@@ -21,18 +21,22 @@ import {EventDispatcher,Matrix4x4} from "com/mi/rs/index.js";
  * Creates a %RSCamera.
  */
 export default class RSCamera {
+	@observable
 	m_transform;
+	@observable
 	m_orthographic;
+	@observable
 	m_aperture;
+	@observable
 	m_focal;
+	@observable
 	m_clip_max;
+	@observable
 	m_clip_min;
 	
+	@observable
 	m_scene_up_direction;
 	
-	m_dispatcher;
-
-
 	static Y_UP = 0;
 
 	static Z_UP = 1;
@@ -47,8 +51,6 @@ export default class RSCamera {
 		this.m_clip_min = 0.1;
 		
 		this.m_scene_up_direction = RSCamera.Y_UP;
-		
-		this.m_dispatcher = new EventDispatcher();
 	}
 
 	/**
@@ -78,12 +80,6 @@ export default class RSCamera {
 		camera.m_scene_up_direction = this.m_scene_up_direction;
 	}
 
-	attributeChange(property, newValue, oldValue)
-	{
-		var eventName = property + "_change";
-		this.dispatchEvent(new PropertyChangeEvent(eventName, this, newValue, oldValue, property));
-	}
-
 	/**
 	 * Sets the matrix of the transform from anything that Matrix4x4.setFromObject supports.
 	 */ 
@@ -92,10 +88,10 @@ export default class RSCamera {
 		if(null != value)
 		{
 			this.m_transform.worldToObj = value;
-			this.attributeChange("transform", this.m_transform.worldToObj, null);
 		}
 	}
 
+	@computed
 	get matrix()
 	{
 		return this.m_transform.worldToObj;
@@ -105,6 +101,7 @@ export default class RSCamera {
 	 * Sets the camera data from either an object with appropriate properties
 	 * or from another RSCamera instance.
 	 */
+	@action
 	setFromObject(camera)
 	{
 		if(null != camera)
@@ -138,6 +135,7 @@ export default class RSCamera {
 	 * 
 	 * @param camera The camera to set from.
 	 */
+	@action
 	setFromCamera(camera)
 	{
 		this.transform = camera.transform.clone();                 
@@ -155,14 +153,14 @@ export default class RSCamera {
 	 * @param horizontal The amount to pan in the right direction.
 	 * @param vertical The amount to pan in the up direction.
 	 * @param shiftTargetPoint Move the target point with the camera.
-	 */               
+	 */          
+	@action     
 	pan(horizontal, vertical, shiftTargetPoint)
 	{
 		if (shiftTargetPoint != false)
 			shiftTargetPoint = true;
 			
 		this.m_transform.translate(horizontal, vertical, 0, true, shiftTargetPoint);
-		this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
 	/**
@@ -171,6 +169,7 @@ export default class RSCamera {
 	 * @param depth The amount to move along the direction vector.
 	 * @param shiftTargetPoint Move the target point along direction*i_z.  
 	 */
+	@action
 	dolly(depth, shiftTargetPoint)
 	{
 		if (shiftTargetPoint != true)
@@ -186,7 +185,6 @@ export default class RSCamera {
 		else
 		{
 			this.m_transform.translate(0, 0, depth, true, shiftTargetPoint);
-			this.attributeChange("transform", this.m_transform.worldToObj, null);
 		}
 	}
 
@@ -195,10 +193,10 @@ export default class RSCamera {
 	 * 
 	 * @param vertical The amount to move along the up vector.
 	 */ 
+	@action
 	elevate(vertical)
 	{
 		this.m_transform.translate(0, vertical, 0, true);
-		this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
 	/**
@@ -208,6 +206,7 @@ export default class RSCamera {
 	 * @param horizontalAxis The amount to rorate aroung the right vector in radians.
 	 * @param orbitPoint The point to orbit around, if set this will change the orbit point.
 	 */
+	@action
 	orbit(verticalAxis, horizontalAxis, orbitPoint)
 	{
 		if (orbitPoint != null) 
@@ -215,7 +214,6 @@ export default class RSCamera {
 			this.setTargetPoint(orbitPoint, false);
 		}
 		this.m_transform.orbitAroundTargetPoint(horizontalAxis, verticalAxis, 0);
-		this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
 	/**
@@ -228,13 +226,13 @@ export default class RSCamera {
 	 * @param horizontalAxis The amount to rorate aroung the right vector in radians.
 	 * @param shiftTargetPoint If true the target point will also rotate around the point.
 	 */
+	@action
 	orbitAroundPoint(point, verticalAxis, horizontalAxis, shiftTargetPoint)
 	{
 		if (shiftTargetPoint != true)
 			shiftTargetPoint = false;
 			
 		this.m_transform.rotateAroundPoint(point, horizontalAxis, verticalAxis, 0, shiftTargetPoint);
-		this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
 	/**
@@ -244,6 +242,7 @@ export default class RSCamera {
 	 * @param horizontalAxis Amount to rotate around the right vector in radians.
 	 * @param directionAxis Amount to rotate around the direction vector in radians.
 	 */
+	@action
 	rotate(verticalAxis, horizontalAxis, directionAxis, shiftTargetPoint)
 	{
 		if (isNaN(directionAxis))
@@ -253,7 +252,6 @@ export default class RSCamera {
 			shiftTargetPoint = true;
 			
 		this.m_transform.rotate(horizontalAxis, verticalAxis, directionAxis, shiftTargetPoint);
-		this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
 	/**
@@ -261,13 +259,13 @@ export default class RSCamera {
 	 * 
 	 * @param horizontalAxis The amount, in radians, to tilt.
 	 */
+	@action
 	tilt(horizontalAxis, shiftTargetPoint)
 	{
 		if (shiftTargetPoint != false)
 			shiftTargetPoint = true;
 			
 		this.m_transform.rotate(horizontalAxis, 0, 0, shiftTargetPoint);
-		this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
 	/**
@@ -275,13 +273,13 @@ export default class RSCamera {
 	 * 
 	 * @param verticalAxis The amount, in radians, to spin.
 	 */ 
+	@action
 	spin(verticalAxis, shiftTargetPoint)
 	{
 		if (shiftTargetPoint != false)
 			shiftTargetPoint = true;
 			
 		this.m_transform.rotate(0, verticalAxis, 0, shiftTargetPoint);
-		this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
 	/**
@@ -290,6 +288,7 @@ export default class RSCamera {
 	 * @param axis The axis to rotate about.
 	 * @param angle The amount, in radians, to rotate.
 	 */
+	@action
 	rotateAroundAxis(axis, angle, inCameraSpace, shiftTargetPoint)
 	{
 		if (inCameraSpace != true)
@@ -299,7 +298,6 @@ export default class RSCamera {
 			shiftTargetPoint = true;
 			
 		this.m_transform.rotateAroundAxis(axis, angle, inCameraSpace, shiftTargetPoint);
-		this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
 	/**
@@ -308,13 +306,13 @@ export default class RSCamera {
 	 * @param location The position to move to.
 	 * @param shiftTargetPoint Set this parameter to true to shift the target point of the camera along the vector new_position -> old_position.
 	 */
+	@action
 	moveTo(location, shiftTargetPoint)
 	{
 		if (shiftTargetPoint != false)
 			shiftTargetPoint = true;
 			
 		this.m_transform.setTranslation(location.x, location.y, location.z, shiftTargetPoint);
-		this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
 	/**
@@ -323,13 +321,13 @@ export default class RSCamera {
 	 * @param move The vector to move along.
 	 * @param shiftTargetPoint Set this parameter to true to shift the target point of the camera along v.
 	 */
+	@action
 	translate(move, shiftTargetPoint)
 	{
 		if (shiftTargetPoint != false)
 			shiftTargetPoint = true;
 			
 		this.m_transform.translate(move.x, move.y, move.z, false, shiftTargetPoint);
-		this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
 	/**
@@ -415,15 +413,16 @@ export default class RSCamera {
 
 	/**
 	 * Aligns the camera to the horizontal plane
-	 */ 
+	 */
+	@action
 	levelCamera()
 	{
 		// Negative angle to the horizon based on the up vector.
 		var angle = Math.asin(this.direction.dot(this.m_transform.getDefaultUpDirection()));
 		this.m_transform.rotate(-angle, 0, 0);
-		attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
+	@computed
 	get orthographic()
 	{
 		return this.m_orthographic;
@@ -438,7 +437,6 @@ export default class RSCamera {
 		if(ortho != this.m_orthographic)
 		{
 			this.m_orthographic = ortho;
-			this.attributeChange("orthographic", ortho, !ortho);
 		}
 	}
 
@@ -447,6 +445,7 @@ export default class RSCamera {
 	 * 
 	 * @return The half field of view.
 	 */
+	@computed
 	get fieldOfView()
 	{
 		if(this.m_orthographic)
@@ -472,6 +471,7 @@ export default class RSCamera {
 	/**
 	 * The aperture of the camera.
 	 */   
+	@computed
 	get aperture()
 	{
 		return this.m_aperture;
@@ -492,13 +492,13 @@ export default class RSCamera {
 		{
 			var oldValue = this.m_aperture;
 			this.m_aperture = aperture;
-			this.attributeChange("aperture", aperture, oldValue);
 		}
 	}
 
 	/**
 	 * The focal length of the camera.
 	 */
+	@computed
 	get focal()
 	{
 		return this.m_focal;
@@ -508,12 +508,12 @@ export default class RSCamera {
 	{
 		var oldValue = this.m_focal;
 		this.m_focal = focal;
-		this.attributeChange("focal", focal, oldValue);
 	}
 
 	/**
 	 * The transform of the camera.
 	 */
+	@computed
 	get transform()
 	{
 		return this.m_transform;
@@ -524,13 +524,13 @@ export default class RSCamera {
 		if(transform != this.m_transform)
 		{
 			this.m_transform = transform;
-			this.attributeChange("transform", this.m_transform.worldToObj, null);
 		}
 	}
 
 	/**
 	* The clip max of the view frustum
 	*/
+	@computed
 	get clipMax()
 	{
 		return this.m_clip_max;
@@ -540,12 +540,12 @@ export default class RSCamera {
 	{
 		var oldValue = this.m_clip_max;
 		this.m_clip_max = clipMax;
-		this.attributeChange("clip_max", clipMax, oldValue);
 	}
 
 	/**
 	 * The clip min of the view frustum
 	 */
+	@computed
 	get clipMin()
 	{
 		return this.m_clip_min;
@@ -555,7 +555,6 @@ export default class RSCamera {
 	{
 		var oldValue = this.m_clip_min;
 		this.m_clip_min = clipMin;
-		this.attributeChange("clip_min", clipMin, oldValue);
 	}
 
 	/**
@@ -563,24 +562,25 @@ export default class RSCamera {
 	 * 
 	 * @param orbitPoint The new target point.
 	 */
+	@action
 	setTargetPoint(targetPoint, resetUpVector)
 	{
 		if (resetUpVector != false)
 			resetUpVector = true;
 			
 		this.m_transform.setTargetPoint(targetPoint, resetUpVector);
-		if(this.m_transform.getFollowTargetPoint())
-			this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
-	getTargetPoint()
+	@computed
+	get targetPoint()
 	{
-		return this.m_transform.getTargetPoint();
+		return this.m_transform.targetPoint;
 	}
 
 	/**
 	 * The look direction vector of the camera.
 	 */
+	@computed
 	get direction()
 	{
 		return this.m_transform.ZAxis;
@@ -589,6 +589,7 @@ export default class RSCamera {
 	/**
 	 * The up vector of the camera.
 	 */
+	@computed
 	get up()
 	{
 		return this.m_transform.YAxis;
@@ -597,23 +598,25 @@ export default class RSCamera {
 	/**
 	 * The right vector of the camera.
 	 */
+	@computed
 	get right()
 	{
 		return this.m_transform.XAxis;
 	}
 
+	@action
 	setLocation(loc, moveTargetPoint)
 	{
 		if (moveTargetPoint != true)
 			moveTargetPoint = false;
 			
 		this.m_transform.setTranslation(loc.x, loc.y, loc.z, moveTargetPoint);
-		this.attributeChange("transform", this.m_transform.worldToObj, null);
 	}
 
 	/**
 	 * The position of the camera in world space.
 	 */
+	@computed
 	get location()
 	{
 		return this.m_transform.translation;
@@ -633,10 +636,10 @@ export default class RSCamera {
 			else
 				this.m_transform.setUpDirection(TransformBase.NEG_Z_AXIS);
 
-			this.attributeChange("transform", this.m_transform.worldToObj, null);
 		}
 	}
 
+	@computed
 	get sceneUpDirection()
 	{
 		return this.m_scene_up_direction;
@@ -648,56 +651,12 @@ export default class RSCamera {
 		if(oldValue != follow)
 		{
 			this.transform.setFollowTargetPoint(follow);
-			this.attributeChange("follow_target_point", follow, oldValue);
-			if(follow)
-			{
-				this.attributeChange("transform", this.m_transform.worldToObj, null);
-			}
 		}
 	}
+
+	@computed
 	get followTargetPoint()
 	{
 		return this.transform.getFollowTargetPoint();
 	}
-
-	// --------------------------------------------------
-	// Wrapped Event Dispatcher methods:
-	// --------------------------------------------------
-	/**
-	 * Registers an event listener object with the dispatcher. 
-	 * This method wraps the EventDispatcher method of the same name.
-	 * 
-	 * @param type The type of event.
-	 * @param listener The listener function that process the event.
-	 */
-	addEventListener(type, listener, context)
-	{
-		this.m_dispatcher.addEventListener(type, listener, context);
-	}
-
-	/**
-	 * Removes an event listener object with the dispatcher. 
-	 * This method wraps the Flex EventDispatcher method of the same name.
-	 * 
-	 * @param type The type of event.
-	 * @param listener The listener function that process the event.
-	 * @param useCapture Determines if the event listener works in the 
-	 * 					capture phase or the target and bubbling phase.
-	 */
-	removeEventListener(type, listener)
-	{
-		this.m_dispatcher.removeEventListener(type, listener);
-	}
-
-	/**
-	 * Dispatches an event. 
-	 * This method wraps the EventDispatcher method of the same name.
-	 * 
-	 * @param event The event to dispatch.
-	 */
-	dispatchEvent(event)
-	{
-		return this.m_dispatcher.dispatchEvent(event);
-	}
-
 }
