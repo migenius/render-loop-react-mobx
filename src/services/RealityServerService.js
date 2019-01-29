@@ -210,10 +210,10 @@ export default class RealityServerService {
      * the scene (such as 3ds max, or Maya). */
     sceneUpVector = RSCamera.Y_UP;
 
-    // For some reason when adding the strict doctype, firefox will
-    // not report the width and height set on the image tag. So we
-    // explicitly set the width and height to use here.
+    // rendererd image width
     imgWidth = 500;
+
+    // rendered image height
     imgHeight = 370;
 
     /** The name of the render loop to use */
@@ -314,6 +314,9 @@ export default class RealityServerService {
 	}
 
 	async start(renderTargetImage, width, height) {
+        if (!renderTargetImage || !width || !height) {
+            throw "invalid parameters";
+        }
 		// Initialize the ImageRenderTarget. The render target is used
         // by the service together with the RenderCommand to render
         // images. The render target will in this case take ownership
