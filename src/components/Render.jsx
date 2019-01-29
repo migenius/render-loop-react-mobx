@@ -139,7 +139,7 @@ class Render extends React.Component {
   {
     const rect = this.refs.image.getBoundingClientRect();
     const click_x = event.pageX - rect.left;
-    const click_y = this.image_height - (event.pageY - rect.top);
+    const click_y = this.refs.image.parentElement.clientHeight - (event.pageY - rect.top);
 
     try {
       const picked = await this.props.RS.pick(click_x,click_y);
