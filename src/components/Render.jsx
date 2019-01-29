@@ -19,9 +19,6 @@ class Render extends React.Component {
   prevX = 0;
   prevY = 0;
 
-  image_width = 500;
-  image_height = 370;
-
   constructor(props) {
     super(props);
 
@@ -44,7 +41,7 @@ class Render extends React.Component {
   }
 
   componentDidMount() {
-    this.props.RS.start(this.refs.image,this.image_width,this.image_height);
+    this.props.RS.start(this.refs.image,this.refs.image.parentElement.clientWidth,this.refs.image.parentElement.clientHeight);
 
     // when we have 1 image display the render view
     when(
