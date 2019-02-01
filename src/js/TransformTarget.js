@@ -2,7 +2,7 @@
  * Copyright 2010-2019 migenius pty ltd, Australia. All rights reserved. 
  *****************************************************************************/
 import TransformBase from "./TransformBase";
-import {Vector4,Matrix4x4} from "com/mi/rs/index.js";
+import {Vector4} from "realityserver";
 import {observable,computed,action} from "mobx";
 
 /**
@@ -38,7 +38,7 @@ export default class TransformTarget extends TransformBase {
 		this.m_up_direction = TransformBase.Y_AXIS.clone();
 
 		// So the target point is not the same as the translation.
-		this.m_target_point = new Vector4([0, 0, -1]);
+		this.m_target_point = new Vector4(0, 0, -1);
 		this.m_z_axis.z = -1;
 	}
 
@@ -75,8 +75,8 @@ export default class TransformTarget extends TransformBase {
 
 		const transform = clone;
 		transform.m_follow_target_point = this.m_follow_target_point;
-		transform.m_up_direction.setFromVector(this.m_up_direction);
-		transform.m_target_point.setFromVector(this.m_target_point);
+		transform.m_up_direction.set(this.m_up_direction);
+		transform.m_target_point.set(this.m_target_point);
 	}
 
 	@action
@@ -134,7 +134,7 @@ export default class TransformTarget extends TransformBase {
 			dist = this.m_translation.distance(this.m_target_point);
 		}
 		const to_target = this.ZAxis.scale(dist);
-		this.m_target_point.setFromVector(this.m_translation);
+		this.m_target_point.set(this.m_translation);
 		this.m_target_point.add(to_target);
 	}
 
@@ -143,7 +143,7 @@ export default class TransformTarget extends TransformBase {
 	 */
 	setUpDirection(upVector)
 	{
-		this.m_up_direction.setFromVector(upVector);
+		this.m_up_direction.set(upVector);
 	}
 	getUpDirection()
 	{
@@ -180,12 +180,12 @@ export default class TransformTarget extends TransformBase {
 		
 		// If we are setting the target point back to the same location then 
 		// we don't need to set it and potentially call a lookAtTargetPoint.
-		if(Vector4.equalWithTolerance(targetPoint, this.m_target_point))
+		if(targetPoint.equal_with_tolerance(this.m_target_point))
 		{
 			return;
 		}
 		
-		this.m_target_point.setFromVector(targetPoint);
+		this.m_target_point.set(targetPoint);
 		if(this.m_follow_target_point)
 		{
 			if (resetYVector != false)
@@ -334,10 +334,10 @@ export default class TransformTarget extends TransformBase {
 			
 		if (rotateTargetPoint || !this.m_follow_target_point)
 		{
-			this.m_x_axis.setFromVector(TransformBase.X_AXIS);
-			this.m_y_axis.setFromVector(TransformBase.Y_AXIS);
+			this.m_x_axis.set(TransformBase.X_AXIS);
+			this.m_y_axis.set(TransformBase.Y_AXIS);
 		}
-		this.m_z_axis.setFromVector(TransformBase.NEG_Z_AXIS);
+		this.m_z_axis.set(TransformBase.NEG_Z_AXIS);
 
 		this.rotate(x, y, z, rotateTargetPoint);
 	}
@@ -380,9 +380,9 @@ export default class TransformTarget extends TransformBase {
 		if (rotateTargetPoint != false)
 			rotateTargetPoint = true;
 			
-		this.m_x_axis.setFromVector(TransformBase.X_AXIS);
-		this.m_y_axis.setFromVector(TransformBase.Y_AXIS);
-		this.m_z_axis.setFromVector(TransformBase.NEG_Z_AXIS);
+		this.m_x_axis.set(TransformBase.X_AXIS);
+		this.m_y_axis.set(TransformBase.Y_AXIS);
+		this.m_z_axis.set(TransformBase.NEG_Z_AXIS);
 
 		this.rotateAroundAxis(axis, angle, false, rotateTargetPoint);
 	}
@@ -399,7 +399,7 @@ export default class TransformTarget extends TransformBase {
 			rotateTargetPoint = true;
 			
 		if (rotateTargetPoint && (point == this.m_target_point || 
-			Vector4.equalWithTolerance(point, this.m_target_point)))
+			point.equal_with_tolerance(this.m_target_point)))
 		{
 			rotateTargetPoint = false;
 		}
@@ -422,12 +422,12 @@ export default class TransformTarget extends TransformBase {
 		this._rotateYVectors(this.m_up_direction, dy, rotate);
 		this._rotateXVectors(this.m_x_axis, dx, rotate);
 		
-		this.m_translation.setFromVector(point);
+		this.m_translation.set(point);
 		this.m_translation.add(to_point);
 
 		if(rotateTargetPoint)
 		{
-			this.m_target_point.setFromVector(point);
+			this.m_target_point.set(point);
 			this.m_target_point.add(to_target_point);
 		}
 		else if(this.m_follow_target_point)

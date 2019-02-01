@@ -1,5 +1,5 @@
 import { observable, computed, action, autorun } from "mobx";
-import {BatchCommand,Command,GenericRenderCommand,ImageRenderTarget,RenderLoopStateData,RSService,StateData,WebSocketStreamer} from "com/mi/rs/index.js";
+import {BatchCommand,Command,HTMLImageDisplay,RenderLoopStateData,StateData,WebSocketStreamer} from "realityserver";
 import RSCamera from "../js/RSCamera";
 import RealityServerState from "./RealityServerState";
 
@@ -32,7 +32,7 @@ class WebSocketRenderDisplay {
             this.RS.service.defaultStateData = new RenderLoopStateData(this.RS.renderLoopName,1,true);
             let count = 0;
             this.RS.service.stream({render_loop_name: this.RS.renderLoopName, image_format: "jpg", quality: "100" },
-                this.RS.renderTarget,
+                this.RS.renderHandler,
                 (response) => {
                     this.RS.state.status = "Waiting for first render.";
                 },
@@ -51,127 +51,6 @@ class WebSocketRenderDisplay {
     }
 }
 
-class ImgRenderDisplay {
-    
-    renderLoopTimer = null;
-    
-    keepAliveTimer = null;
-    
-    waitingForImage = false;
-    
-    requestRenderWhenDone = false;
-
-    count = 0;
-
-    constructor(RS) {
-        this.RS = RS;
-        this.RS.state.imageRendered.source = this.RS.service.connectorName;
-        this.RS.state.imageRendered.data = {
-            statistics: {
-                fps: this.RS.state.renderFPS
-            }
-        };
-        
-    }
-
-    start() {
-        if (this.renderLoopTimer == null) {
-            this.RS.state.status = "Starting client render retrieval loop.";
-            this.renderLoopTimer = window.setInterval(() => this.renderScene(),1000/this.RS.state.renderFPS);
-            this.renderScene();
-        }
-        if (this.keepAliveTimer == null) {
-            this.RS.state.status = "Starting keep alive timer.";
-            this.keepAliveTimer = window.setInterval(() => this.keepAlive(),1000*this.RS.state.keepAliveTime);
-        }
-    }
-
-    restart() {
-        this.start();
-    }
-
-    /**
-     * Very simple client side render loop implemented as a response
-     * handler. When called it will issue a new render command and
-     * add itself as response handler which will cause the scene to
-     * be updated as fast as possible. While this works fine, it is
-     * possible to design applications with a lot more control over
-     * how and when renderings are requested. This is however outside
-     * the scope of this simple example.
-     */
-    renderScene()
-    {
-        // This very simple client side render loop will simply
-        // render a new image as soon as the previous rendering
-        // has finished.
-        if (this.waitingForImage) {
-            this.requestRenderWhenDone = true;
-        } else {
-            this.waitingForImage = true;
-            const renderCommand = new GenericRenderCommand(this.RS.renderTarget, "render_loop_get_last_render", {render_loop_name:this.RS.renderLoopName});
-            this.RS.service.addCommand(renderCommand,resp => this.renderDoneCallback(resp));
-        }
-    }
-
-    renderDoneCallback(resp)
-    {
-        this.waitingForImage = false;
-
-        // Stop rendering if an error occurs.
-        if(resp != null && resp.isErrorResponse)
-        {
-            // not an error if haven't got firstFrame yet since the loop is still
-            // probably starting up
-            if (this.count !== 0) {
-                this.RS.state.status = "Failed to render scene.";
-            } 
-            return;
-        }
-        if (resp == null) {
-            return;
-        }
-        this.count++;
-
-        this.RS.state.imageRendered.count = this.count; 
-                
-        if (this.count % this.RS.state.converganceTestFrequency == 0) {
-            const renderResultCommand = new Command("render_loop_get_last_render_result", {render_loop_name:this.RS.renderLoopName});
-            this.RS.service.addCommand(renderResultCommand,(resp) => this.renderResultDoneCallback(resp));
-        }
-        if (this.requestRenderWhenDone == true) {
-            this.requestRenderWhenDone = false;
-            this.renderScene();
-        }
-    }
-
-    renderResultDoneCallback(resp)
-    {
-        if (resp.isErrorResponse) {
-            this.RS.state.status = 'Error retrieving render result.';
-            return;
-        }
-        this.RS.state.imageRendered.data.result = resp.result;
-        if (resp.result == 1) {
-            // converged, we want to stop rendering.
-            if (this.renderLoopTimer != null) {
-                window.clearInterval(this.renderLoopTimer);
-                this.renderLoopTimer = null;
-                // force one more render to ensure we have got the
-                // converged image
-                this.renderScene();
-            }
-        }
-    }
-
-    keepAlive() {
-        // NB: In production implementations the keep alive should not be sent via the RealityServer Client Library since the service only allows a single set of commands
-        // to be 'on the wire' at a time. If a long running command is executing then the keep alive command will be delayed until that command completes and the render loop
-        // may expire in the meantime. Instead keep alives should be sent manually using a standard Ajax request.
-        const keepAliveCommand = new Command("render_loop_keep_alive", {render_loop_name:this.RS.state.renderLoopName});
-        this.RS.service.addCommand(keepAliveCommand);
-    }
-}
-
 export default class RealityServerService {
 
     /** The RealityServer Service object */
@@ -185,7 +64,7 @@ export default class RealityServerService {
     /** The unique user session scope name. User modifications will be
      * made in this scope to make sure changes does not affect other
      * sessions. */
-    userScope = "user_scope_" + RSService.createRandomString(8);
+    userScope = "user_scope_" + WebSocketStreamer.createRandomString(8);
 
     /** The path to the scene to load. */
     scenePath = "scenes/meyemII.mi";
@@ -217,13 +96,13 @@ export default class RealityServerService {
     imgHeight = 370;
 
     /** The name of the render loop to use */
-    renderLoopName = "demo_render_loop_" + RSService.createRandomString(8);
+    renderLoopName = "demo_render_loop_" + WebSocketStreamer.createRandomString(8);
 
     /** Name of the render loop handler to use */
     renderLoopHandlerName = "default";
 
-    /** The ImageRenderTarget used for rendering the scene. */
-    renderTarget = undefined;
+    /** The RenderedImageHandler used for displaying rendered images. */
+    renderHandler = undefined;
 
     /** pick request ID */
     pickRequest = 0;
@@ -313,26 +192,12 @@ export default class RealityServerService {
 	    }
 	}
 
-	async start(renderTargetImage, width, height) {
-        if (!renderTargetImage || !width || !height) {
+	async start(renderHandlerImage, width, height) {
+        if (!renderHandlerImage || !width || !height) {
             throw "invalid parameters";
         }
-		// Initialize the ImageRenderTarget. The render target is used
-        // by the service together with the RenderCommand to render
-        // images. The render target will in this case take ownership
-        // of the image that will display the renderings of the scene.
-        // The image is the one specified in the HTML code and its
-        // onload, onabort, and onerror event handlers will be taken
-        // over by the ImageRenderTarget. These must not be changed
-        // by the application from now on since the Image will be used
-        // by the service to process commands that returns an image.
-        // There is a second mode of ImageRenderTarget where no image
-        // is passed in the custructor. In this mode it is the
-        // responsibility of the application to listen for events and
-        // load a URL that returns the renderd image itself, and notify
-        // the ImageRenderTarget when this is done. See ImageRenderTarget
-        // documentation for more information.
-        this.renderTarget = new ImageRenderTarget(renderTargetImage);
+
+        this.renderHandler = new HTMLImageDisplay(renderHandlerImage);
 
         this.imgWidth = width;
         this.imgHeight = height;
@@ -344,15 +209,7 @@ export default class RealityServerService {
             // and will then use the web socket connection when processing
             // commands.
             this.service = new WebSocketStreamer();
-            /*try {
-                await this.service.connect((this.state.secure ? "wss://" : "ws://")+this.state.host+":"+this.state.port+"/render_loop_stream/");
-            } catch (err) {
-                this.state.status = "Web Socket connection failed. Falling back to HTTP service.";
-
-                this.service = new RSService(this.state.host, this.state.port);
-                this.importScene();
-                return;
-            }*/
+            
             this.service.connect((this.state.secure ? "wss://" : "ws://")+this.state.host+":"+this.state.port+"/render_loop_stream/",
                 () => {
                     this.state.status = "Web Socket streamer connected, loading scene.";
@@ -365,23 +222,12 @@ export default class RealityServerService {
                     this.importScene();
                 },
                 err => {
-                    this.state.status = "Web Socket connection failed. Falling back to HTTP service.";
-
-                    this.service = new RSService(this.state.host, this.state.port);
-                    this.importScene();
+                    this.state.status = "Web Socket connection failed.";
                 }
             );
 
         } else {
-            // Create a RSService object to use for command processing.
-            // The service can be used immediately and will then use
-            // the default HTTP connector when processing commands (the
-            // HTTP connector wraps commands in HTTP requests). The
-            // JavaScript client library only supports a HTTP connector
-            // while the flash client library also supports an RTMP
-            // connector that allow video streaming from the server.
-            this.service = new RSService(this.state.host, this.state.port);
-            this.importScene();
+            this.state.status = "Web Sockets not supported.";
         }
 	}
 
@@ -433,13 +279,7 @@ export default class RealityServerService {
         // First check if the batch command itself failed.
         if(resp.isErrorResponse)
         {
-            if(resp.error.code == RSService.CLIENT_SIDE_ERROR_CODE_CONNECTION) {
-                this.state.status = "Failed to initialize application. No connection to server.";
-                this.state.connection_status = 'failed';
-                this.state.host = undefined;
-            } else {
-                this.state.status = "Failed to initialize application. " + resp.error.message;
-            }
+            this.state.status = "Failed to initialize application. " + resp.error.message;
             return;
         }
         let responses = resp.subResponses;
@@ -576,12 +416,7 @@ export default class RealityServerService {
         // First check if the batch command itself failed.
         if(resp.isErrorResponse)
         {
-            if(resp.error.code == RSService.CLIENT_SIDE_ERROR_CODE_CONNECTION) {
-                this.state.status = "Failed to initialize application. No connection to server.";
-                this.state.host = undefined;
-            } else {
-                this.state.status = "Failed to initialize application. " + resp.error.message;
-            }
+            this.state.status = "Failed to initialize application. " + resp.error.message;
             return;
         }
 
@@ -692,11 +527,8 @@ export default class RealityServerService {
             return;
         }
 
-        if (this.service.connectorName == 'WS') {
-            this.localLoop = new WebSocketRenderDisplay(this);
-        } else {
-            this.localLoop = new ImgRenderDisplay(this);
-        }
+        this.localLoop = new WebSocketRenderDisplay(this);
+        
         this.localLoop.start();
 
         // The application is now ready to respond to user input.
@@ -745,7 +577,7 @@ export default class RealityServerService {
             //    r,g,b;outline_instance(,outline_instance)*(;(watch_instance)?(,watch_instance)*(;disable_instance(,disable_instance)*)?)?
             const outline = this.state.outlined && this.state.outlined.length ? ('1,1,0;' + this.state.outlined.join(',')) : '';
             this.service.addCommand(
-                new com.mi.rs.Command("render_loop_set_parameter", {
+                new Command("render_loop_set_parameter", {
                     render_loop_name: this.renderLoopName,
                     key: "outline",
                     value: outline

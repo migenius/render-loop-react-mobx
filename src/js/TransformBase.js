@@ -1,7 +1,7 @@
 /******************************************************************************
  * Copyright 2010-2019 migenius pty ltd, Australia. All rights reserved. 
  *****************************************************************************/
-import {Vector4,Matrix4x4} from "com/mi/rs/index.js";
+import {Vector4,Matrix4x4} from "realityserver";
 import {observable,computed,action} from "mobx";
 
 /**
@@ -37,13 +37,13 @@ export default class TransformBase
 	@observable		
 	m_dirty_matrix;
 
-	static X_AXIS = new Vector4([1, 0, 0]);
-	static Y_AXIS = new Vector4([0, 1, 0]);
-	static Z_AXIS = new Vector4([0, 0, 1]);
+	static X_AXIS = new Vector4(1, 0, 0);
+	static Y_AXIS = new Vector4(0, 1, 0);
+	static Z_AXIS = new Vector4(0, 0, 1);
 
-	static NEG_X_AXIS = new Vector4([-1, 0, 0]);
-	static NEG_Y_AXIS = new Vector4([ 0,-1, 0]);
-	static NEG_Z_AXIS = new Vector4([ 0, 0,-1]);
+	static NEG_X_AXIS = new Vector4(-1, 0, 0);
+	static NEG_Y_AXIS = new Vector4( 0,-1, 0);
+	static NEG_Z_AXIS = new Vector4( 0, 0,-1);
 
 	constructor() {
 		this.m_translation = new Vector4();
@@ -52,7 +52,7 @@ export default class TransformBase
 		this.m_y_axis = TransformBase.Y_AXIS.clone();
 		this.m_z_axis = TransformBase.Z_AXIS.clone();
 
-		this.m_scale = new Vector4([1, 1, 1]);
+		this.m_scale = new Vector4(1, 1, 1);
 
 		this.m_dirty_matrix = true;
 	}
@@ -78,11 +78,11 @@ export default class TransformBase
 	{
 		//clone.m_world_to_obj.setFromMatrix(this.m_world_to_obj);
 
-		clone.m_translation.setFromVector(this.m_translation);
-		clone.m_z_axis.setFromVector(this.m_z_axis);
-		clone.m_y_axis.setFromVector(this.m_y_axis);
-		clone.m_x_axis.setFromVector(this.m_x_axis);
-		clone.m_scale.setFromVector(this.m_scale);
+		clone.m_translation.set(this.m_translation);
+		clone.m_z_axis.set(this.m_z_axis);
+		clone.m_y_axis.set(this.m_y_axis);
+		clone.m_x_axis.set(this.m_x_axis);
+		clone.m_scale.set(this.m_scale);
 		clone.m_dirty_matrix = this.m_dirty_matrix;
 	}
 
@@ -144,19 +144,19 @@ export default class TransformBase
 		var obj_to_world = new Matrix4x4(worldToObj);
 		obj_to_world.invert();
 
-		this.m_translation.setElements();
-		this.m_translation.transformTranspose(obj_to_world);  
+		this.m_translation.set(0,0,0);
+		this.m_translation.transform(obj_to_world);  
 
-		this.m_z_axis.setFromVector(TransformBase.Z_AXIS);
-		this.m_z_axis.rotateTranspose(obj_to_world);
+		this.m_z_axis.set(TransformBase.Z_AXIS);
+		this.m_z_axis.rotate(obj_to_world);
 		this.m_z_axis.normalize();
 
-		this.m_y_axis.setFromVector(TransformBase.Y_AXIS);
-		this.m_y_axis.rotateTranspose(obj_to_world);
+		this.m_y_axis.set(TransformBase.Y_AXIS);
+		this.m_y_axis.rotate(obj_to_world);
 		this.m_y_axis.normalize();
 
-		this.m_x_axis.setFromVector(TransformBase.X_AXIS);
-		this.m_x_axis.rotateTranspose(obj_to_world);
+		this.m_x_axis.set(TransformBase.X_AXIS);
+		this.m_x_axis.rotate(obj_to_world);
 		this.m_x_axis.normalize();
 	}
 
@@ -185,7 +185,7 @@ export default class TransformBase
 	@action
 	_setTranslation(x, y, z)
 	{
-		this.m_translation.setElements(x, y, z);
+		this.m_translation.set(x, y, z);
 		this.m_dirty_matrix = true;
 	}
 	get translation()
@@ -212,7 +212,7 @@ export default class TransformBase
 	@action
 	_setScale(x, y, z)
 	{
-		this.m_scale.setElements(x, y, z);
+		this.m_scale.set(x, y, z);
 		this.m_dirty_matrix = true;
 	}
 
@@ -264,10 +264,10 @@ export default class TransformBase
 			
 		var m = new Matrix4x4();
 		if(inObjectSpace) {
-			axis = axis.clone().rotateTranspose(this.worldToObj);
+			axis = axis.clone().rotate_transpose(this.worldToObj);
 		}
 
-		m.setRotation(axis, angle);
+		m.set_rotation(axis, angle);
 		for(var i = 0; i < rotationVectors.length; i++)
 		{
 			rotationVectors[i].rotate(m);
@@ -341,12 +341,12 @@ export default class TransformBase
 			this._setTranslation(setTranslation.x, setTranslation.y, setTranslation.z);
 		}
 
-		this.m_y_axis.setFromVector(up);
+		this.m_y_axis.set(up);
 		this.m_y_axis.normalize();
 
 		var to_point = point.clone().subtract(this.m_translation);
 		to_point.normalize();
-		this.m_z_axis.setFromVector(to_point);
+		this.m_z_axis.set(to_point);
 
 		this.m_x_axis = this.m_y_axis.cross(this.m_z_axis).normalize();
 		this.m_y_axis = this.m_z_axis.cross(this.m_x_axis).normalize();

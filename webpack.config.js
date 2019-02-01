@@ -25,7 +25,7 @@ module.exports = env => {
     ],
     resolve: {
       extensions: ['.js', '.jsx'],
-      modules: ['src/thirdparty/client_libraries/javascript', 'node_modules'],
+      modules: [ 'node_modules'],
       alias: { mobx: __dirname + "/node_modules/mobx/lib/mobx.es6.js" }
     },
     module: {

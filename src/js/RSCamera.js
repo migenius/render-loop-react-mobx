@@ -3,7 +3,7 @@
  *****************************************************************************/
 import TransformTarget from "./TransformTarget";
 import TransformBase from "./TransformBase";
-import {Matrix4x4} from "com/mi/rs/index.js";
+import {Matrix4x4} from "realityserver";
 import {observable,computed,action} from "mobx";
 
 /**
@@ -340,7 +340,7 @@ export default class RSCamera {
 	transformPoint(point, result)
 	{
 		var world2Cam = this.transform.worldToObj;
-		result.setFromVector(point)
+		result.set(point)
 		result.transform(world2Cam);
 		return true;
 	}
@@ -356,7 +356,7 @@ export default class RSCamera {
 	{
 		var world2Cam = this.transform.worldToObj;
 		var myDir = direction.clone();
-		result.setFromVector(myDir.rotate(world2Cam));
+		result.set(myDir.rotate(world2Cam));
 		return true;
 	}
 
@@ -372,7 +372,7 @@ export default class RSCamera {
 		var cam2World = this.transform.worldToObj.clone();
 		var myDir = direction.clone();
 		cam2World.invert();
-		result.setFromVector(myDir.rotateTranspose(cam2World));
+		result.set(myDir.rotate(cam2World));
 		return true;
 	}
 
@@ -397,7 +397,7 @@ export default class RSCamera {
 				var matrix1 = this.transform.worldToObj;
 				var matrix2 = rhs.transform.worldToObj; 
 
-				if( Matrix4x4.equalWithTolerance(matrix1,matrix2) == true)
+				if( matrix1.equal_with_tolerance(matrix2) == true)
 					result = true;
 			}
 		return result;
