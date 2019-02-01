@@ -21,7 +21,7 @@ class WebSocketRenderDisplay {
         this.RS = RS;
     }
 
-    start() {
+    async start() {
         if (!this.RS.service.streaming(this.RS.renderLoopName)) {
             this.RS.state.status = "Starting web socket stream.";
 
@@ -31,19 +31,19 @@ class WebSocketRenderDisplay {
             // achieved.
             this.RS.service.defaultStateData = new RenderLoopStateData(this.RS.renderLoopName,1,true);
             let count = 0;
-            this.RS.service.stream({render_loop_name: this.RS.renderLoopName, image_format: "jpg", quality: "100" },
-                this.RS.renderHandler,
-                (response) => {
-                    this.RS.state.status = "Waiting for first render.";
-                },
-                (data) => {
-                    if (data.result < 0) {
-                        return; // error on render, don't try and show it
+            try {
+                await this.RS.service.stream({render_loop_name: this.RS.renderLoopName, image_format: "jpg", quality: "100" },
+                    this.RS.renderHandler,
+                    (data) => {
+                        if (data.result < 0) {
+                            return; // error on render, don't try and show it
+                        }
+                        this.RS.state.imageRendered.count = this.RS.state.imageRendered.count+1; 
+                        this.RS.state.imageRendered.data = data;
                     }
-                    this.RS.state.imageRendered.count = this.RS.state.imageRendered.count+1; 
-                    this.RS.state.imageRendered.data = data;
-                }
-            );
+                );
+                this.RS.state.status = "Waiting for first render.";
+            } catch (e) {};
         }
     }
     restart() {
@@ -210,22 +210,20 @@ export default class RealityServerService {
             // commands.
             this.service = new WebSocketStreamer();
             
-            this.service.connect((this.state.secure ? "wss://" : "ws://")+this.state.host+":"+this.state.port+"/render_loop_stream/",
-                () => {
-                    this.state.status = "Web Socket streamer connected, loading scene.";
-                    this.state.connection_status = 'connected';
-                    // Uncomment below to enable debug mode where WebSocket commands are
-                    // sent using text rather than binary. This can be helpful when
-                    // trying to debug command sequences.
-                    
-                    this.service.debug_commands(true);
-                    this.importScene();
-                },
-                err => {
-                    this.state.status = "Web Socket connection failed.";
-                }
-            );
-
+            try {
+                await this.service.connect((this.state.secure ? "wss://" : "ws://")+this.state.host+":"+this.state.port+"/render_loop_stream/");
+            } catch(err) {
+                this.state.status = "Web Socket connection failed.";
+                return;
+            }
+            this.state.status = "Web Socket streamer connected, loading scene.";
+            this.state.connection_status = 'connected';
+            // Uncomment below to enable debug mode where WebSocket commands are
+            // sent using text rather than binary. This can be helpful when
+            // trying to debug command sequences.
+            
+            this.service.debug_commands(true);
+            this.importScene();
         } else {
             this.state.status = "Web Sockets not supported.";
         }
