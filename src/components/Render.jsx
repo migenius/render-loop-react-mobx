@@ -142,6 +142,7 @@ class Render extends React.Component {
     const click_y = this.refs.image.parentElement.clientHeight - (event.pageY - rect.top);
 
     try {
+      this.props.RS.pause_display();
       const picked = await this.props.RS.pick(click_x,click_y);
       if (picked) {
         this.props.RS.state.outlined = [ picked[0].picked_object_instance ];

@@ -1,20 +1,7 @@
 import { observable, computed, action, autorun } from "mobx";
-import {BatchCommand,Command,HTMLImageDisplay,RenderLoopStateData,StateData,WebSocketStreamer} from "realityserver";
+import {Command,HTMLImageDisplay,RenderLoopStateData,StateData,WebSocketStreamer} from "realityserver";
 import RSCamera from "../js/RSCamera";
 import RealityServerState from "./RealityServerState";
-
-/*
-function Promisify(thing,func) {
-    const orig = thing.prototype[func];
-
-    thing.prototype[func] = function(arg) {
-        return new Promise(function (resolved, rejected) {
-            orig(arg,resolved,rejected);
-         });
-    }
-}
-Promisify(WebSocketStreamer,'connect');
-*/
 
 class WebSocketRenderDisplay {
     constructor(RS) {
@@ -112,10 +99,10 @@ export default class RealityServerService {
 
 		this.state.status = "Initializing application...";
 
-		this.acquireHostAndPort();
+		this.acquire_host_and_port();
 	}
 
-  	acquireHostAndPort()
+  	acquire_host_and_port()
 	{
 		if (process.env.RS_HOST !== undefined || process.env.RS_PORT !== undefined || process.env.RS_SECURE !== undefined) {
 			if (process.env.RS_HOST === undefined || process.env.RS_PORT === undefined || process.env.RS_SECURE === undefined)  {
@@ -222,104 +209,58 @@ export default class RealityServerService {
             // sent using text rather than binary. This can be helpful when
             // trying to debug command sequences.
             
-            this.service.debug_commands(true);
-            this.importScene();
+           // this.service.debug_commands(true);
+            this.import_scene();
         } else {
             this.state.status = "Web Sockets not supported.";
         }
 	}
 
-    importScene() {
+    async import_scene() {
         // Create a batch command to initialize the application. Batch
         // commands are useful to process a bunch of commands as if
         // they were a single command and can simplify certain tasks
         // and also offer a bit more control in some regards, such as
         // error handling.
-        const initApplicationBatch = new BatchCommand();
+        let renderers,scene_info;
+        try {
+            const [ renderers_response, scene_response ] = await this.service.queue_commands()
+            .queue(
+                new Command("get_available_renderers", {}),true
+            )
+            .queue(
+                new Command("create_scope", {scope_name:this.applicationScope})
+            )
+            .queue(
+                new Command("create_scope", {parent_scope:this.applicationScope, scope_name:this.userScope})
+            )
+            .queue(
+                new Command("use_scope", {scope_name:this.applicationScope})
+            )
+            .queue(
+                new Command("import_scene", {block:true, scene_name:this.sceneName, filename:this.scenePath}),true
+            ).send();
 
-        // Get available renderers to populate the select box
-        initApplicationBatch.addCommand(new Command("get_available_renderers", {}));
-
-        // Add sub-command that creates the application scope.
-        initApplicationBatch.addCommand(new Command("create_scope", {scope_name:this.applicationScope}));
-
-        // Add sub-command that creates the user scope which is a
-        // child of the application scope.
-        initApplicationBatch.addCommand(new Command("create_scope", {parent_scope:this.applicationScope, scope_name:this.userScope}));
-
-        // Add command that switch the current scope to the
-        // application scope. This will affect the rest of the
-        // commands in this batch. (Note that this is safe usage
-        // of use_scope only because this is the first and only
-        // command added by the application and other commands
-        // won't be added until this command completes. use_scope
-        // should normally only be used as state commands. See
-        // IStateData for more information.)
-        initApplicationBatch.addCommand(new Command("use_scope", {scope_name:this.applicationScope}));
-
-        // Load the scene. The scene will be loaded in the
-        // application scope which will be the same for all users
-        // of this application. This ensures that only one copy of
-        // the scene is loaded regardless of how many users have
-        // loaded this application.
-        initApplicationBatch.addCommand(new Command("import_scene", {block:true, scene_name:this.sceneName, filename:this.scenePath}));
-
-        // Add the batch command. All of the sub-commands defined
-        // above will be processed as part of the batch command in
-        // the order they were added. Only a single response handler
-        // can be added for the batch command as a whole and the
-        // response will contain responses for all the sub-commands.
-        this.service.addCommand(initApplicationBatch, (resp) => { this.importSceneResponse(resp); } );
-    }
-
-	importSceneResponse(resp)
-    {
-        // First check if the batch command itself failed.
-        if(resp.isErrorResponse)
-        {
-            this.state.status = "Failed to initialize application. " + resp.error.message;
-            return;
-        }
-        let responses = resp.subResponses;
-
-        // Check if any of the sub-commands failed.
-        if(resp.hasSubErrorResponse)
-        {
-            // There was an error in one or more of the responses.
-            // Go through each response. If the first response is
-            // an error response and the code is -3 then the
-            // create application scope command failed because the
-            // scope already exists. This is expected since this
-            // scope will only be created once. So ignore this
-            // error. Other errors will cause application
-            // initialization aborted.
-
-            let len = responses.length;
-            let fatalError = false;
-            let errMsg = "";
-            for(let i=0; i<len; i++)
-            {
-                let c = responses[i];
-                if(c.isErrorResponse && !( (i==1) && (c.error.code == -3) ))
-                {
-                    if(errMsg == "")
-                        errMsg = c.error.message;
-                    fatalError = true;
-                }
-            }
-
-            if(fatalError)
-            {
-                // Initialization failed! errMsg will contain the
-                // error message of the first fatal error.
-                this.state.status = "Initialization error: " + errMsg;
+            if (renderers_response.error) {
+                this.state.status = `Error getting renderers: ${JSON.stringify(renderers_response.error)}`;
                 return;
             }
+            if (scene_response.error) {
+                this.state.status = `Error loading scene: ${JSON.stringify(scene_response.error)}`;
+                return;
+            }
+            renderers = renderers_response.result;
+            scene_info = scene_response.result;
+        } catch(err) {
+            this.state.status = `Service error: ${JSON.stringify(err)}`;
+            return;
         }
 
-        // Populate renderer list
-        let renderers = responses[0].result;
+        this.prepare_scene(renderers,scene_info);        
+    }
 
+	async prepare_scene(renderers,scene_info)
+    {
         this.state.renderers = renderers;
         this.state.renderer = 'iray';
 
@@ -327,17 +268,8 @@ export default class RealityServerService {
         // the import_scene response. This command is at index 3
         // (added as the fourth command) so its response will also
         // be at index 3.
-        let importSceneResponse = responses[4];
-        if(importSceneResponse.command.name !== "import_scene")
-        {
-            // The application has been modified and the import_scene
-            // command is no longer at the expected index.
-            this.state.status = "Failed to initialize application. The import_scene response not at expected index.";
-            return;
-        }
-        
-        this.cameraName = importSceneResponse.result.camera;
-        this.cameraInstanceName = importSceneResponse.result.camera_instance;
+        this.cameraName = scene_info.camera;
+        this.cameraInstanceName = scene_info.camera_instance;
 
         // The scene is now loaded and the application and user
         // scopes have been created. The commands that are processed
@@ -373,143 +305,76 @@ export default class RealityServerService {
         // Initialize rendering.
         this.state.status = "Initializing rendering...";
 
-        // A batch command is used also to initialize the rendering.
-        let initRenderingBatch = new BatchCommand();
+        let camera_info,camera_matrix;
+        try {
+            const [ get_camera_response, get_matrix_response ] = await this.service.queue_commands()
+            .queue(
+                new Command("localize_element", {element_name:this.cameraInstanceName})
+            )
+            .queue(
+                new Command("localize_element", {element_name:this.cameraName})
+            )
+            .queue(
+                new Command("camera_set_aspect", {camera_name:this.cameraName, aspect:(this.imgWidth/this.imgHeight)})
+            )
+            .queue(
+                new Command("camera_set_resolution", {camera_name:this.cameraName, resolution:{x:this.imgWidth, y:this.   imgHeight}})
+            )
+            .queue(
+                new Command("get_camera", {camera_name:this.cameraName}),true
+            )
+            .queue(
+                new Command("instance_get_world_to_obj", {instance_name:this.cameraInstanceName}),true
+            ).send();
 
-        // Just executing commands in the user scope is not enough
-        // to ensure that the changes are local to a user. The
-        // scene objects that the applications changes must also be
-        // localized to the user scope using the localize_element
-        // command. Localization will be made to the current scope
-        // which was set earlier to be the user scope by default.
-
-        // Localize the scene camera object and the camera instance
-        // since this application will modify these two scene objects.
-        initRenderingBatch.addCommand(new Command("localize_element", {element_name:this.cameraInstanceName}));
-        initRenderingBatch.addCommand(new Command("localize_element", {element_name:this.cameraName}));
-
-        // Set the camera resolution and aspect to match the
-        // size of the view.
-        initRenderingBatch.addCommand(new Command("camera_set_aspect", {camera_name:this.cameraName, aspect:(this.imgWidth/this.imgHeight)}));
-        initRenderingBatch.addCommand(new Command("camera_set_resolution", {camera_name:this.cameraName, resolution:{x:this.imgWidth, y:this.   imgHeight}}));
-
-        // Fetch camera data, needed to set up the client side
-        // camera object.
-        initRenderingBatch.addCommand(new Command("get_camera", {camera_name:this.cameraName}));
-
-        // Fetch the camera instance transform, needed to set up the
-        // initial orientation of the client side camera object.
-        initRenderingBatch.addCommand(new Command("instance_get_world_to_obj", {instance_name:this.cameraInstanceName}));
-
-        // Process the batch command that will initialize rendering.
-        this.service.addCommand(initRenderingBatch,  (resp) => { this.initRenderingResponse(resp); } );
-    }
-
-
-    /**
-     * Called when the initRenderingBatch command has been processed.
-     */
-    initRenderingResponse(resp)
-    {
-        // First check if the batch command itself failed.
-        if(resp.isErrorResponse)
-        {
-            this.state.status = "Failed to initialize application. " + resp.error.message;
-            return;
-        }
-
-        // Check if any of the sub commads had errors.
-        if(resp.hasSubErrorResponse)
-        {
-            var responses = resp.subResponses;
-            var len = responses.length;
-            var errMsg = "";
-            for(var i=0; i<len; i++)
-            {
-                // There was an error in one or more of the responses.
-                // Go through each response. The first error will also
-                // be printed in the status line.
-                var c = responses[i];
-                if(c.isErrorResponse)
-                {
-                    if(errMsg == "")
-                        errMsg = c.error.message;
-                }
+            if (get_camera_response.error) {
+                this.state.status = `Error getting camera: ${JSON.stringify(get_camera_response.error)}`;
+                return;
             }
-            this.state.status = "Failed to initialize rendering." + errMsg;
+            if (get_matrix_response.error) {
+                this.state.status = `Error loading camera matrix: ${JSON.stringify(get_matrix_response.error)}`;
+                return;
+            }
+            camera_info = get_camera_response.result;
+            camera_matrix = get_matrix_response.result;
+        } catch(err) {
+            this.state.status = `Service error: ${JSON.stringify(err)}`;
             return;
         }
 
-        // Extract camera information from the reply. The get_camera
-        // command was added as the fifth command so the sub-response
-        // will be at index 2.
-        var getCameraResponse = resp.subResponses[4];
-        if(getCameraResponse.command.name !== "get_camera")
-        {
-            // The application has been modified and the sub-response
-            // is no longer at the expected index.
-            this.state.status = "Failed to initialize application. The get_camera sub-response not at expected index.";
-            return;
-        }
-
-        // Extract the camera transform from the reply. The
-        // instance_get_world_to_obj command was added as the
-        // sixth command so the sub-response will be at index 5.
-        var getCameraTransformResponse = resp.subResponses[5];
-        if(getCameraTransformResponse.command.name !== "instance_get_world_to_obj")
-        {
-            // The application has been modified and the sub-response
-            // is no longer at the expected index.
-            this.state.status = "Failed to initialize application. The instance_get_world_to_obj sub-response not at expected index.";
-            return;
-        }
 
         // Update the client side camera representation with
         // initial values from the scene camera.
-        this.camera.setFromObject(getCameraResponse.result);
+        this.camera.setFromObject(camera_info);
 
-        this.camera.matrix = getCameraTransformResponse.result;
+        this.camera.matrix = camera_matrix;
 
 
         // Set the scene up vector (depends on the application that
         // created the scene and affects navigation).
         this.camera.sceneUpDirection = this.sceneUpVector;
 
-            /*
-        this.camera.addEventListener("transform_change", event => {
-            // At this point we know that the client side camera
-            // transform has changed and that the scene camera needs
-            // to be updated for this to be reflected in the rendering.
-
-            // Previously in the example commands have been added by
-            // using service.addCommand(). This is fine for commands
-            // that just needs to be executed once, such as commands
-            // to load the scene, create scopes, etc. But in this case
-            // we need to update the server side camera as a response
-            // to user input. While the service is busy processing
-            // commands it will simply queue up any commands added by
-            // service.addCommand(). So adding a command to update the
-            // camera transform everytime the client side camera
-            // transform change would flood the service with redundant
-            // commands. What is needed is a mechanism to know when the
-            // service is ready to process new commands, and this is done
-            // by using the process commands callback mechansism.
-
-            // Add a callback to the service that will be called when
-            // the service is no longer buzy processing commands. During
-            // now and the time this callback is made it is the
-            // responsibility of the application to keep track of user
-            // input and translate that into an optimized set of commands
-            // when the callback is made. The callback will be placed in a
-            // queue so any callbacks added by other parts of the
-            // application before this one will be called first, and
-            // consequently any commands they add will be processed before
-            // any commands added by this callback.
-            this.service.addCallback( (seq) => this.updateCameraTransformCallback(seq));
-        });;
-*/
         this.state.status = "Rendering using server side render loop...";
-        this.service.addCommand(new Command("render_loop_start", {render_loop_name:this.renderLoopName, render_loop_handler_name:this.renderLoopHandlerName, scene_name: this.sceneName, render_loop_handler_parameters: [ "renderer", this.state.renderer ], timeout: this.state.renderLoopExpiryTime}),() => { this.startLocalRenderLoop() });
+        try {
+            const [ start_loop_response ] = await this.service.execute_command(
+                new Command("render_loop_start",
+                    {
+                        render_loop_name:this.renderLoopName,
+                        render_loop_handler_name:this.renderLoopHandlerName,
+                        scene_name: this.sceneName,
+                        render_loop_handler_parameters: [ "renderer", this.state.renderer ],
+                        timeout: this.state.renderLoopExpiryTime
+                    }),true);
+            if (start_loop_response.error) {
+                this.state.status = "Creation of render loop failed.";
+                return;
+            }
+        } catch(err) {
+            this.state.status = `Service error: ${JSON.stringify(err)}`;
+            return;
+        }
+
+        this.start_local_render_loop();
     }
 
     /**
@@ -517,14 +382,8 @@ export default class RealityServerService {
      * Renders will be retrieved at a fixed frame rate configured by the
      * renderFPS variable.
      */
-    startLocalRenderLoop(resp)
+    start_local_render_loop()
     {
-        if(resp != null && resp.isErrorResponse)
-        {
-            this.state.status = "Creation of render loop failed.";
-            return;
-        }
-
         this.localLoop = new WebSocketRenderDisplay(this);
         
         this.localLoop.start();
@@ -540,88 +399,50 @@ export default class RealityServerService {
         // be triggered any time the camera is modified in such a way
         // that its transform changes.
         autorun(reaction => {
-            this.service.addCallback( (seq) => {
-                // The service is now ready to process commands and it is
-                // time to generate an optimized sequence of commands that
-                // updated the camera transform. In this case this is very
-                // simple since the client side camera representation is
-                // keeping track of the most recent camera transform and
-                // this is what should be used.
-
-                if (this.service.connectorName == 'WS') {
-                    this.service.update_camera(this.renderLoopName,{camera_instance: { name: this.cameraInstanceName, transform: this.camera.matrix }});
-                } else {
-                    // Add the command that sets the camera instance transform
-                    // to the most recent value. Note that this command must be
-                    // added to the supplied ICommandSequence instance, not by
-                    // using service.addCommand().
-                    seq.addCommand(new Command("instance_set_world_to_obj", {instance_name:this.cameraInstanceName, transform:this.camera.matrix}));
-                    seq.addCommand(new Command("render_loop_cancel_render", {render_loop_name:this.renderLoopName, cancel_level: 1}));
-                }
-                this.localLoop.restart();
-            });
+            // The service is now ready to process commands and it is
+            // time to generate an optimized sequence of commands that
+            // updated the camera transform. In this case this is very
+            // simple since the client side camera representation is
+            // keeping track of the most recent camera transform and
+            // this is what should be used.
+            this.service.update_camera(this.renderLoopName,{camera_instance: { name: this.cameraInstanceName, transform: this.camera.matrix }});
         })
 
         // watch renderer
         autorun( reaction => {
-            this.service.addCommand(
+            this.service.execute_command(
                 new Command("render_loop_set_parameter", {render_loop_name:this.renderLoopName,key:"renderer",value:this.state.renderer})
             );
         });
 
         // watch selection to outline it.
-        autorun( reaction => {
+        autorun( async reaction => {
             // Now that we picked something, set the outline parameter to highlight. Format is:
             //    r,g,b;outline_instance(,outline_instance)*(;(watch_instance)?(,watch_instance)*(;disable_instance(,disable_instance)*)?)?
             const outline = this.state.outlined && this.state.outlined.length ? ('1,1,0;' + this.state.outlined.join(',')) : '';
-            this.service.addCommand(
+            // set outline and wait until the change appears
+            await this.service.execute_command(
                 new Command("render_loop_set_parameter", {
                     render_loop_name: this.renderLoopName,
                     key: "outline",
                     value: outline
-                }), (resp) => {
-                    this.service.addCommand(new Command("render_loop_mark_dirty", {
-                        render_loop_name: this.renderLoopName,
-                        cancel_level: 1
-                    }), (resp) => {
-                        this.localLoop.restart();
-                    }); 
-                });
+                }),false,true);
+            this.resume_display();
         });
     }
 
-    /**
-     * Called when the service is ready to process commands for this
-     * callback.
-     */
-    updateCameraTransformCallback(seq)
+    pause_display()
     {
-        // The service is now ready to process commands and it is
-        // time to generate an optimized sequence of commands that
-        // updated the camera transform. In this case this is very
-        // simple since the client side camera representation is
-        // keeping track of the most recent camera transform and
-        // this is what should be used.
-
-        if (this.service.connectorName == 'WS') {
-            this.service.update_camera(this.renderLoopName,{camera_instance: { name: this.cameraInstanceName, transform: this.camera.matrix }});
-        } else {
-            // Add the command that sets the camera instance transform
-            // to the most recent value. Note that this command must be
-            // added to the supplied ICommandSequence instance, not by
-            // using service.addCommand().
-            seq.addCommand(new Command("instance_set_world_to_obj", {instance_name:this.cameraInstanceName, transform:this.camera.matrix}));
-            seq.addCommand(new Command("render_loop_cancel_render", {render_loop_name:this.renderLoopName, cancel_level: 1}));
+        if (this.localLoop) {
+            this.service.pause_display(this.renderLoopName);
         }
-        //renderIsConverged = false;
-        this.localLoop.restart();
-        /*
-        // if the render loop is not running, and we're not streaming, start it again
-        if (renderLoopTimer==null && !webSocketStreamer) {
-            restartedRenderLoop = true;
-            setStatus("Scene dirty, restarting client render loop.");
-            startLocalRenderLoop(null);
-        }*/
+    }
+
+    resume_display()
+    {
+        if (this.localLoop) {
+            this.service.resume_display(this.renderLoopName);
+        }
     }
 
     async pick(x,y) {
@@ -629,61 +450,66 @@ export default class RealityServerService {
                 "pick_request":     { type: "Sint32",       value: ++this.pickRequest},
                 "pick_position":    { type: "Float32<2>",   value: {x,y} }
         }
-        const batch = new BatchCommand();
-        const pickCommand = new Command("element_set_attributes", {
-            element_name: this.cameraName,
-            attributes: params,
-            create: true
-        });
-        batch.addCommand(pickCommand);
+        this.service.queue_commands()
+        .queue(
+            new Command("element_set_attributes", {
+                element_name: this.cameraName,
+                attributes: params,
+                create: true
+            })
+        )
+        .queue(
+            new Command("render_loop_cancel_render", {
+                render_loop_name: this.renderLoopName
+            })
+        ).send();
 
-        // Must mark the scene dirty to create a new transaction
-        batch.addCommand(new Command("render_loop_cancel_render", {
-            render_loop_name: this.renderLoopName
-        }));
-
-        // Send the commands to the server
-        this.service.addCommand(batch);
-
-        return new Promise((resolved, rejected) => {
+        return new Promise((resolve, reject) => {
             // Wait then poll for our pick results on the render loop
-            setTimeout(() => this.pickPollCallback(resolved,rejected), 500); 
+            setTimeout(() => this.pick_poll_callback(resolve,reject), 500); 
         });
     }
 
-    pickPollCallback(resolved,rejected) {
-        const pollBatch = new BatchCommand();
+    async pick_poll_callback(resolve,reject) {
+        const queue = this.service.queue_commands();
+
         ["pick_response", "pick_result_error", "pick_result_position", "pick_result_object_name", "pick_result_path"].forEach((attr_name) => {
-            pollBatch.addCommand(new Command("element_get_attribute", {
+            queue.queue(new Command("element_get_attribute", {
                 element_name: this.cameraName,
                 attribute_name: attr_name
-            }));
+            }),true);
         });
-        this.service.addCommand(pollBatch, (resp) => this.pickDoneCallback(resp,resolved,rejected));
-    }
-
-    pickDoneCallback(resp,resolved,rejected) {
-        if (resp.isErrorResponse) {
-            console.error("Pick Error: ", resp);
-            rejected();
+        let responses;
+        try {
+            responses = await queue.send();
+        } catch (err) {
+            this.state.status = `Service error: ${JSON.stringify(err)}`;
+            reject();
             return;
         }
-        var pickResponse = resp.subResponses[0];
-        if (pickResponse.isErrorResponse || pickResponse.result !== this.pickRequest) {
-            setTimeout(() => this.pickPollCallback(resolved,rejected), 1000); 
+        this.pick_done(responses,resolve,reject);
+    }
+
+    pick_done(resp,resolve,reject) {
+        if (!resp) {
+            // strange. let's try again later
+            setTimeout(() => this.pick_poll_callback(resolve,reject), 1000); 
+        }        
+        if (!resp || resp[0].isErrorResponse || resp[0].result !== this.pickRequest) {
+            setTimeout(() => this.pick_poll_callback(resolve,reject), 1000); 
         } else {
-            var error = resp.subResponses[1].result;
+            var error = resp[1].result;
             if (error && error.length > 0) {
                 // picked nothing
-                resolved(undefined);
+                resolve(undefined);
             } else {
                 var result = [{
-                    world_point: resp.subResponses[2].result,
-                    picked_object_name: resp.subResponses[3].result,
-                    picked_object_instance: resp.subResponses[4].result[1],
-                    paths: resp.subResponses[4].result
+                    world_point: resp[2].result,
+                    picked_object_name: resp[3].result,
+                    picked_object_instance: resp[4].result[1],
+                    paths: resp[4].result
                 }];
-                resolved(result);
+                resolve(result);
             }
         }
     }
