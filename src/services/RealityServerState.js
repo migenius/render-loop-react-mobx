@@ -1,4 +1,4 @@
-import { observable } from "mobx";
+import { observable } from 'mobx';
 
 export default class RealityServerState {
 
@@ -21,7 +21,7 @@ export default class RealityServerState {
   version = '4442';
 
   renderLoopExpiryTime = 10;
-  
+
   constructor() {
   }
 }
