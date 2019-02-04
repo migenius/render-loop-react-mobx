@@ -1,4 +1,4 @@
-import { autorun } from 'mobx';
+import { reaction } from 'mobx';
 import { Command,HTMLImageDisplay,RenderLoopStateData,StateData,Service } from 'realityserver';
 import RSCamera from '../js/RSCamera';
 import RealityServerState from './RealityServerState';
@@ -371,59 +371,63 @@ export default class RealityServerService {
         this.localLoop.start();
 
         // The application is now ready to respond to user input.
-        // The code that handles user input and updates the camera
-        // is separated out into two navigator classes, one for
-        // simple dollying using the mouse wheel and one for orbiting
-        // the camera. These classes will modify the camera instance
-        // which will fire an event every time its transform changes.
 
-        // Listen for camera transform change events. This event will
+        // Camera navigation is handled by the application level.
+        // Here we just watch for the changes to the camera matrx
+        // and update it on change.
+        
+        // React to camera transform change events. This will
         // be triggered any time the camera is modified in such a way
         // that its transform changes.
-        autorun(reaction => {
-            // The service is now ready to process commands and it is
-            // time to generate an optimized sequence of commands that
-            // updated the camera transform. In this case this is very
-            // simple since the client side camera representation is
-            // keeping track of the most recent camera transform and
-            // this is what should be used.
-            this.service.update_camera(this.renderLoopName,
+        reaction(
+            () => { return this.camera.matrix },
+            matrix => {
+                this.service.update_camera(this.renderLoopName,
                 {
                     camera_instance: {
                         name: this.cameraInstanceName,
-                        transform: this.camera.matrix
+                        transform: matrix
                     }
                 });
-        });
+            }
+        );
 
-        // watch renderer
-        autorun( reaction => {
-            this.service.execute_command(
-                new Command('render_loop_set_parameter',
-                    {
-                        render_loop_name:this.renderLoopName,
-                        key:'renderer',
-                        value:this.state.renderer
-                    })
-            );
-        });
+        // watch the renderer and change to the new renderer when it
+        // changes
+        reaction(
+            () => { return this.state.renderer },
+            renderer => {
+                this.service.execute_command(
+                    new Command('render_loop_set_parameter',
+                        {
+                            render_loop_name:this.renderLoopName,
+                            key:'renderer',
+                            value: renderer
+                        })
+                );
+            }
+        );
 
-        // watch selection to outline it.
-        autorun( async reaction => {
-            // Now that we picked something, set the outline parameter to highlight. Format is:
-            //    r,g,b;outline_instance(,outline_instance)*(;(watch_instance)?(,watch_instance)*(;disable_instance(,disable_instance)*)?)?
-            const outline = this.state.outlined && this.state.outlined.length ?
-                ('1,1,0;' + this.state.outlined.join(',')) :
-                '';
-            // set outline and wait until the change appears
-            await this.service.execute_command(
-                new Command('render_loop_set_parameter', {
-                    render_loop_name: this.renderLoopName,
-                    key: 'outline',
-                    value: outline
-                }),false,true);
-            this.resume_display();
-        });
+        // watch the array of outlined objects and outline the objects
+        // when it changes
+        reaction(
+            () => { return this.state.outlined.slice() },
+            async outlined => {
+                // Now that we picked something, set the outline parameter to highlight. Format is:
+                //    r,g,b;outline_instance(,outline_instance)*(;(watch_instance)?(,watch_instance)*(;disable_instance(,disable_instance)*)?)?
+                const outline = outlined && outlined.length ?
+                    ('1,1,0;' + outlined.join(',')) :
+                    '';
+                // set outline and wait until the change appears
+                await this.service.execute_command(
+                    new Command('render_loop_set_parameter', {
+                        render_loop_name: this.renderLoopName,
+                        key: 'outline',
+                        value: outline
+                    }),false,true);
+                this.resume_display();
+            }
+        );
     }
 
     pause_display() {
