@@ -1,5 +1,5 @@
 import { autorun } from 'mobx';
-import { Command,HTMLImageDisplay,RenderLoopStateData,StateData,WebSocketStreamer } from 'realityserver';
+import { Command,HTMLImageDisplay,RenderLoopStateData,StateData,Service } from 'realityserver';
 import RSCamera from '../js/RSCamera';
 import RealityServerState from './RealityServerState';
 
@@ -55,7 +55,7 @@ export default class RealityServerService {
     /** The unique user session scope name. User modifications will be
      * made in this scope to make sure changes does not affect other
      * sessions. */
-    userScope = 'user_scope_' + WebSocketStreamer.createRandomString(8);
+    userScope = 'user_scope_' + Service.createRandomString(8);
 
     /** The path to the scene to load. */
     scenePath = 'scenes/meyemII.mi';
@@ -87,7 +87,7 @@ export default class RealityServerService {
     imgHeight = 370;
 
     /** The name of the render loop to use */
-    renderLoopName = 'demo_render_loop_' + WebSocketStreamer.createRandomString(8);
+    renderLoopName = 'demo_render_loop_' + Service.createRandomString(8);
 
     /** Name of the render loop handler to use */
     renderLoopHandlerName = 'default';
@@ -173,13 +173,13 @@ export default class RealityServerService {
         this.imgWidth = width;
         this.imgHeight = height;
 
-        if (WebSocketStreamer.supported()) {
-            // Create a WebSocketStreamer object to use for command
+        if (Service.supported()) {
+            // Create a Service object to use for command
             // processing and receiving rendered images for the
             // render loop. The service can be used once connected
             // and will then use the web socket connection when processing
             // commands.
-            this.service = new WebSocketStreamer();
+            this.service = new Service();
 
             try {
                 await this.service.connect((this.state.secure ? 'wss://' : 'ws://')+this.state.host+':'+this.state.port+'/render_loop_stream/');
@@ -193,7 +193,7 @@ export default class RealityServerService {
             // sent using text rather than binary. This can be helpful when
             // trying to debug command sequences.
 
-            // this.service.debug_commands(true);
+            this.service.debug_commands(true);
             this.import_scene();
         } else {
             this.state.status = 'Web Sockets not supported.';
