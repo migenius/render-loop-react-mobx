@@ -1,9 +1,7 @@
 import React from 'react';
 import { observable, autorun, when } from 'mobx';
 import { observer } from 'mobx-react';
-import RS from 'realityserver';
-
-const { Vector4 } = RS.Math;
+import { Vector4 } from 'realityserver';
 
 @observer
 class Render extends React.Component {
