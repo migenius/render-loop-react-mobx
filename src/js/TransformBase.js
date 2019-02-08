@@ -1,8 +1,10 @@
 /******************************************************************************
  * Copyright 2010-2019 migenius pty ltd, Australia. All rights reserved.
  *****************************************************************************/
-import { Vector4,Matrix4x4 } from 'realityserver';
+import RS from 'realityserver';
 import { observable,computed,action } from 'mobx';
+
+const { Vector4,Matrix4x4 } = RS.Math;
 
 /**
  * @file TransformBase.js
