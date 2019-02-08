@@ -223,7 +223,7 @@ export default class RealityServerService {
                 )
                 .queue(
                     new Command('import_scene', { block:true, scene_name:this.sceneName, filename:this.scenePath }),true
-                ).send();
+                ).execute();
 
             if (renderers_response.error) {
                 this.state.status = `Error getting renderers: ${JSON.stringify(renderers_response.error)}`;
@@ -308,7 +308,7 @@ export default class RealityServerService {
                 )
                 .queue(
                     new Command('instance_get_world_to_obj', { instance_name:this.cameraInstanceName }),true
-                ).send();
+                ).execute();
 
             if (get_camera_response.error) {
                 this.state.status = `Error getting camera: ${JSON.stringify(get_camera_response.error)}`;
@@ -397,7 +397,7 @@ export default class RealityServerService {
         reaction(
             () => { return this.state.renderer },
             renderer => {
-                this.service.execute_command(
+                this.service.send_command(
                     new Command('render_loop_set_parameter',
                         {
                             render_loop_name:this.renderLoopName,
@@ -459,7 +459,7 @@ export default class RealityServerService {
                 new Command('render_loop_cancel_render', {
                     render_loop_name: this.renderLoopName
                 })
-            ).send();
+            ).execute();
 
         return new Promise((resolve, reject) => {
             // Wait then poll for our pick results on the render loop
@@ -478,7 +478,7 @@ export default class RealityServerService {
         });
         let responses;
         try {
-            responses = await queue.send();
+            responses = await queue.execute();
         } catch (err) {
             this.state.status = `Service error: ${JSON.stringify(err)}`;
             reject();
