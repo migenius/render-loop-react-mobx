@@ -342,7 +342,7 @@ export default class RealityServerService {
                     image_format: 'jpg',
                     quality: '100'
                 },
-                new HTMLImageDisplay(this.renderImage,(data) => {
+                HTMLImageDisplay(this.renderImage,(data) => {
                     if (data.result < 0) {
                         return; // error on render, don't try and show it
                     }
