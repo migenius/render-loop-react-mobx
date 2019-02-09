@@ -3,45 +3,6 @@ import { Command,HTMLImageDisplay,RenderLoopStateData,StateData,Service } from '
 import RSCamera from '../js/RSCamera';
 import RealityServerState from './RealityServerState';
 
-class WebSocketRenderDisplay {
-    constructor(RS) {
-        this.RS = RS;
-    }
-
-    async start() {
-        if (!this.RS.service.streaming(this.RS.renderLoopName)) {
-            this.RS.state.status = 'Starting web socket stream.';
-
-            this.RS.state.imageRendered.source = this.RS.service.connectorName;
-            // Setting the below will switch the default state so that all commands will now be executed on
-            // the render loop. This isn't necessary for this application however this shows how this is
-            // achieved.
-            this.RS.service.defaultStateData = new RenderLoopStateData(this.RS.renderLoopName,1,true);
-            try {
-                await this.RS.service.stream(
-                    {
-                        render_loop_name: this.RS.renderLoopName,
-                        image_format: 'jpg',
-                        quality: '100'
-                    },
-                    this.RS.renderHandler,
-                    (data) => {
-                        if (data.result < 0) {
-                            return; // error on render, don't try and show it
-                        }
-                        this.RS.state.imageRendered.count = this.RS.state.imageRendered.count+1;
-                        this.RS.state.imageRendered.data = data;
-                    }
-                );
-                this.RS.state.status = 'Waiting for first render.';
-            } catch (e) {};
-        }
-    }
-    restart() {
-        // noop, loop will automatically restart itself as required
-    }
-}
-
 export default class RealityServerService {
 
     /** The RealityServer Service object */
@@ -92,8 +53,8 @@ export default class RealityServerService {
     /** Name of the render loop handler to use */
     renderLoopHandlerName = 'default';
 
-    /** The RenderedImageHandler used for displaying rendered images. */
-    renderHandler = undefined;
+    /** The Image element used for displaying rendered images. */
+    renderImage = undefined;
 
     /** pick request ID */
     pickRequest = 0;
@@ -168,7 +129,7 @@ export default class RealityServerService {
             throw 'invalid parameters';
         }
 
-        this.renderHandler = new HTMLImageDisplay(renderHandlerImage);
+        this.renderImage = renderHandlerImage;
 
         this.imgWidth = width;
         this.imgHeight = height;
@@ -365,10 +326,32 @@ export default class RealityServerService {
      * Renders will be retrieved at a fixed frame rate configured by the
      * renderFPS variable.
      */
-    start_local_render_loop() {
-        this.localLoop = new WebSocketRenderDisplay(this);
+    async start_local_render_loop() {
+        this.state.status = 'Starting web socket stream.';
 
-        this.localLoop.start();
+        this.state.imageRendered.source = this.service.connectorName;
+
+        // Setting the below will switch the default state so that all commands will now be executed on
+        // the render loop. This isn't necessary for this application however this shows how this is
+        // achieved.
+        this.service.defaultStateData = new RenderLoopStateData(this.renderLoopName,1,true);
+        try {
+            await this.service.stream(
+                {
+                    render_loop_name: this.renderLoopName,
+                    image_format: 'jpg',
+                    quality: '100'
+                },
+                new HTMLImageDisplay(this.renderImage,(data) => {
+                    if (data.result < 0) {
+                        return; // error on render, don't try and show it
+                    }
+                    this.state.imageRendered.count = this.state.imageRendered.count+1;
+                    this.state.imageRendered.data = data;
+                })                
+            );
+            this.state.status = 'Waiting for first render.';
+        } catch (e) {};
 
         // The application is now ready to respond to user input.
 
@@ -431,15 +414,11 @@ export default class RealityServerService {
     }
 
     pause_display() {
-        if (this.localLoop) {
-            this.service.pause_display(this.renderLoopName);
-        }
+        this.service.pause_display(this.renderLoopName);
     }
 
     resume_display() {
-        if (this.localLoop) {
-            this.service.resume_display(this.renderLoopName);
-        }
+        this.service.resume_display(this.renderLoopName);
     }
 
     async pick(x,y) {
