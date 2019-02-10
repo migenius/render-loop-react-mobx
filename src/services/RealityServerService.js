@@ -1,5 +1,5 @@
 import { reaction } from 'mobx';
-import { Command,HTMLImageDisplay,RenderLoopStateData,StateData,Service } from 'realityserver';
+import { Command,Helpers,RenderLoopStateData,StateData,Service } from 'realityserver';
 import RSCamera from '../js/RSCamera';
 import RealityServerState from './RealityServerState';
 
@@ -16,7 +16,7 @@ export default class RealityServerService {
     /** The unique user session scope name. User modifications will be
      * made in this scope to make sure changes does not affect other
      * sessions. */
-    userScope = 'user_scope_' + Service.createRandomString(8);
+    userScope = 'user_scope_' + Helpers.create_random_string(8);
 
     /** The path to the scene to load. */
     scenePath = 'scenes/meyemII.mi';
@@ -48,7 +48,7 @@ export default class RealityServerService {
     imgHeight = 370;
 
     /** The name of the render loop to use */
-    renderLoopName = 'demo_render_loop_' + Service.createRandomString(8);
+    renderLoopName = 'demo_render_loop_' + Helpers.create_random_string();
 
     /** Name of the render loop handler to use */
     renderLoopHandlerName = 'default';
@@ -77,48 +77,12 @@ export default class RealityServerService {
             this.state.secure = process.env.RS_SECURE === 'true';
             return;
         }
-        let serviceURL = document.location.toString();
-        if (serviceURL.indexOf('file://') === 0) {
-            // File URL defaults to using local host. Mostly useful
-            // during development.
-            this.state.host = '127.0.0.1';
-            this.state.port = 8080;
-        } else if (serviceURL.indexOf('http://') === 0) {
-            let bracketIndex = serviceURL.indexOf(']', 7);
-            let colonIndex = -1;
-            if (bracketIndex !== -1) {
-                /** Brackets are only used for numerical IPv6, check for port after brackets. */
-                colonIndex = serviceURL.indexOf(':', bracketIndex);
-            } else {
-                colonIndex = serviceURL.indexOf(':', 7);
-            }
-            if (colonIndex < 0) {
-                this.state.port = 80;
-                this.state.host = serviceURL.substring(7, serviceURL.indexOf('/', 7));
-            } else {
-                this.state.host = serviceURL.substring(7, colonIndex);
-                let portStr = serviceURL.substring(colonIndex+1, serviceURL.indexOf('/', 7));
-                this.state.port = parseInt(portStr);
-            }
-        } else if (serviceURL.indexOf('https://') === 0) {
-            let bracketIndex = serviceURL.indexOf(']', 8);
-            let colonIndex = -1;
-            if (bracketIndex !== -1) {
-                /** Brackets are only used for numerical IPv6, check for port after brackets. */
-                colonIndex = serviceURL.indexOf(':', bracketIndex);
-            } else {
-                colonIndex = serviceURL.indexOf(':', 8);
-            }
-            if (colonIndex < 0) {
-                this.state.port = 443;
-                this.state.host = serviceURL.substring(8, serviceURL.indexOf('/', 8));
-            } else {
-                this.state.host = serviceURL.substring(8, colonIndex);
-                let portStr = serviceURL.substring(colonIndex+1, serviceURL.indexOf('/', 8));
-                this.state.port = parseInt(portStr);
-            }
-            this.state.secure = true;
-        } else {
+        try {
+            const details = Helpers.extract_url_details(document.location.toString());
+            this.state.host = details.host;
+            this.state.port = details.port;
+            this.state.secure = details.secure;
+        } catch (e) {
             this.state.status = 'Failed to extract service URL.';
             this.state.connection_error = ('Service URL: Failed to acquire URL. Original URL: ' + document.location.toString());
         }
@@ -134,7 +98,7 @@ export default class RealityServerService {
         this.imgWidth = width;
         this.imgHeight = height;
 
-        if (Service.supported()) {
+        if (Service.supported) {
             // Create a Service object to use for command
             // processing and receiving rendered images for the
             // render loop. The service can be used once connected
@@ -150,11 +114,12 @@ export default class RealityServerService {
             }
             this.state.status = 'Web Socket streamer connected, loading scene.';
             this.state.connection_status = 'connected';
+            
             // Uncomment below to enable debug mode where WebSocket commands are
             // sent using text rather than binary. This can be helpful when
             // trying to debug command sequences.
+            this.service.debug_commands = true;
 
-            this.service.debug_commands(true);
             this.import_scene();
         } else {
             this.state.status = 'Web Sockets not supported.';
@@ -244,7 +209,7 @@ export default class RealityServerService {
         // (unless commands are added with an explicit IStateData
         // instance).
         const stateData = new StateData(null, null, [ new Command('use_scope', { scope_name:this.userScope }) ]);
-        this.service.defaultStateData = stateData;
+        this.service.default_state_data = stateData;
 
         // Initialize rendering.
         this.state.status = 'Initializing rendering...';
@@ -329,12 +294,12 @@ export default class RealityServerService {
     async start_local_render_loop() {
         this.state.status = 'Starting web socket stream.';
 
-        this.state.imageRendered.source = this.service.connectorName;
+        this.state.imageRendered.source = this.service.connector_name;
 
         // Setting the below will switch the default state so that all commands will now be executed on
         // the render loop. This isn't necessary for this application however this shows how this is
         // achieved.
-        this.service.defaultStateData = new RenderLoopStateData(this.renderLoopName,1,true);
+        this.service.default_state_data = new RenderLoopStateData(this.renderLoopName,1,true);
         try {
             await this.service.stream(
                 {
@@ -342,7 +307,7 @@ export default class RealityServerService {
                     image_format: 'jpg',
                     quality: '100'
                 },
-                HTMLImageDisplay(this.renderImage,(data) => {
+                Helpers.HTMLImageDisplay(this.renderImage,(data) => {
                     if (data.result < 0) {
                         return; // error on render, don't try and show it
                     }
@@ -471,7 +436,7 @@ export default class RealityServerService {
             // strange. let's try again later
             setTimeout(() => this.pick_poll_callback(resolve,reject), 1000);
         }
-        if (!resp || resp[0].isErrorResponse || resp[0].result !== this.pickRequest) {
+        if (!resp || resp[0].is_error || resp[0].result !== this.pickRequest) {
             setTimeout(() => this.pick_poll_callback(resolve,reject), 1000);
         } else {
             let error = resp[1].result;
