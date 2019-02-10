@@ -1,5 +1,5 @@
 import { reaction } from 'mobx';
-import { Command,Helpers,RenderLoopStateData,StateData,Service } from 'realityserver';
+import { Command,Helpers,Render_loop_state_data,State_data,Service } from 'realityserver';
 import RSCamera from '../js/RSCamera';
 import RealityServerState from './RealityServerState';
 
@@ -118,7 +118,7 @@ export default class RealityServerService {
             // Uncomment below to enable debug mode where WebSocket commands are
             // sent using text rather than binary. This can be helpful when
             // trying to debug command sequences.
-            this.service.debug_commands = true;
+            //this.service.debug_commands = true;
 
             this.import_scene();
         } else {
@@ -197,19 +197,18 @@ export default class RealityServerService {
         // will work even if no state handlers are installed on the
         // server. The RealityServer client API makes sure commands
         // are executed with the correct state data available by
-        // associating commands with an IStateData instance. This
+        // associating commands with an IState_data instance. This
         // instance is either specified when commands are added to
         // the service or it is possible to set a default IState
-        // data which will then be used whenever no IStateData is
+        // data which will then be used whenever no IState_data is
         // explicitly set.
 
         // Set the default state data using a use_scope state command
         // that selects the user scope. From now on the service will
         // make sure that all commands are executed in the user scope
-        // (unless commands are added with an explicit IStateData
+        // (unless commands are added with an explicit IState_data
         // instance).
-        const stateData = new StateData(null, null, [ new Command('use_scope', { scope_name:this.userScope }) ]);
-        this.service.default_state_data = stateData;
+        this.service.default_state_data = new State_data(null, null, [ new Command('use_scope', { scope_name:this.userScope }) ]);
 
         // Initialize rendering.
         this.state.status = 'Initializing rendering...';
@@ -299,7 +298,7 @@ export default class RealityServerService {
         // Setting the below will switch the default state so that all commands will now be executed on
         // the render loop. This isn't necessary for this application however this shows how this is
         // achieved.
-        this.service.default_state_data = new RenderLoopStateData(this.renderLoopName,1,true);
+        this.service.default_state_data = new Render_loop_state_data(this.renderLoopName,1,true);
         try {
             await this.service.stream(
                 {
@@ -307,7 +306,7 @@ export default class RealityServerService {
                     image_format: 'jpg',
                     quality: '100'
                 },
-                Helpers.HTMLImageDisplay(this.renderImage,(data) => {
+                Helpers.html_image_display(this.renderImage,(data) => {
                     if (data.result < 0) {
                         return; // error on render, don't try and show it
                     }
