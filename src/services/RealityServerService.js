@@ -272,7 +272,9 @@ export default class RealityServerService {
                         scene_name: this.sceneName,
                         render_loop_handler_parameters: [ 'renderer', this.state.renderer ],
                         timeout: this.state.renderLoopExpiryTime
-                    }),true);
+                    }),{
+                        want_response:true
+                    });
             if (start_loop_response.error) {
                 this.state.status = 'Creation of render loop failed.';
                 return;
@@ -371,7 +373,10 @@ export default class RealityServerService {
                         render_loop_name: this.renderLoopName,
                         key: 'outline',
                         value: outline
-                    }),false,true);
+                    }),{
+                        want_response: false,
+                        wait_for_render:true
+                    });
                 this.resume_display();
             }
         );
