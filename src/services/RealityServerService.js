@@ -82,7 +82,7 @@ export default class RealityServerService {
             this.state.host = details.host;
             this.state.port = details.port;
             this.state.secure = details.secure;
-        } catch (e) {
+        } catch (err) {
             this.state.status = 'Failed to extract service URL.';
             this.state.connection_error = ('Service URL: Failed to acquire URL. Original URL: ' + document.location.toString());
         }
@@ -105,11 +105,10 @@ export default class RealityServerService {
             // and will then use the web socket connection when processing
             // commands.
             this.service = new Service();
-
             try {
                 await this.service.connect((this.state.secure ? 'wss://' : 'ws://')+this.state.host+':'+this.state.port+'/render_loop_stream/');
             } catch (err) {
-                this.state.status = 'Web Socket connection failed.';
+                this.state.status = `Web Socket connection failed: ${err.toString()}`;
                 return;
             }
             this.state.status = 'Web Socket streamer connected, loading scene.';
@@ -162,7 +161,7 @@ export default class RealityServerService {
             renderers = renderers_response.result;
             scene_info = scene_response.result;
         } catch (err) {
-            this.state.status = `Service error: ${JSON.stringify(err)}`;
+            this.state.status = `Service error: ${err.toString()}`;
             return;
         }
 
@@ -246,7 +245,7 @@ export default class RealityServerService {
             camera_info = get_camera_response.result;
             camera_matrix = get_matrix_response.result;
         } catch (err) {
-            this.state.status = `Service error: ${JSON.stringify(err)}`;
+            this.state.status = `Service error: ${err.toString()}`;
             return;
         }
 
@@ -280,7 +279,7 @@ export default class RealityServerService {
                 return;
             }
         } catch (err) {
-            this.state.status = `Service error: ${JSON.stringify(err)}`;
+            this.state.status = `Service error: ${err.toString()}`;
             return;
         }
 
@@ -317,7 +316,10 @@ export default class RealityServerService {
                 })                
             );
             this.state.status = 'Waiting for first render.';
-        } catch (e) {};
+        } catch (err) {
+            this.state.status = `Service error: ${err.toString()}`;
+            return;
+        };
 
         // The application is now ready to respond to user input.
 
@@ -428,7 +430,7 @@ export default class RealityServerService {
         try {
             responses = await queue.execute();
         } catch (err) {
-            this.state.status = `Service error: ${JSON.stringify(err)}`;
+            this.state.status = `Service error: ${err.toString()}`;
             reject();
             return;
         }
