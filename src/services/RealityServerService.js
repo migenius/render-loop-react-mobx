@@ -106,7 +106,7 @@ export default class RealityServerService {
             // commands.
             this.service = new Service();
             try {
-                await this.service.connect((this.state.secure ? 'wss://' : 'ws://')+this.state.host+':'+this.state.port+'/render_loop_stream/');
+                await this.service.connect((this.state.secure ? 'wss://' : 'ws://')+this.state.host+':'+this.state.port+'/service/');
             } catch (err) {
                 this.state.status = `Web Socket connection failed: ${err.toString()}`;
                 return;
