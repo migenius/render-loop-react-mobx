@@ -1,7 +1,7 @@
 import React from 'react';
 import { observable, autorun, when } from 'mobx';
 import { observer } from 'mobx-react';
-import { Vector4 } from 'realityserver';
+import { Vector4 } from 'realityserver-client';
 
 @observer
 class Render extends React.Component {

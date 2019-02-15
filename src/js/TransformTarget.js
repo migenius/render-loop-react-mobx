@@ -2,7 +2,7 @@
  * Copyright 2010-2019 migenius pty ltd, Australia. All rights reserved.
  *****************************************************************************/
 import TransformBase from './TransformBase';
-import { Vector4 } from 'realityserver';
+import { Vector4 } from 'realityserver-client';
 import { observable,computed,action } from 'mobx';
 
 /**

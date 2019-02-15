@@ -1,7 +1,7 @@
 /******************************************************************************
  * Copyright 2010-2019 migenius pty ltd, Australia. All rights reserved.
  *****************************************************************************/
-import { Vector4,Matrix4x4 } from 'realityserver';
+import { Vector4,Matrix4x4 } from 'realityserver-client';
 import { observable,computed,action } from 'mobx';
 
 /**

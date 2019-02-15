@@ -1,5 +1,5 @@
 import { reaction } from 'mobx';
-import { Command,Helpers,Render_loop_state_data,State_data,Service } from 'realityserver';
+import { Command,Helpers,Render_loop_state_data,State_data,Service } from 'realityserver-client';
 import RSCamera from '../js/RSCamera';
 import RealityServerState from './RealityServerState';
 
