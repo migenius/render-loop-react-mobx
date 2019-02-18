@@ -304,13 +304,8 @@ export default class RealityServerService {
         // achieved.
         this.service.default_state_data = new Render_loop_state_data(this.renderLoopName,1,true);
         try {
-            this.stream = await this.service.stream(
-                {
-                    render_loop_name: this.renderLoopName,
-                    image_format: 'jpg',
-                    quality: '100'
-                }
-            );
+            this.stream = this.service.create_stream();
+
             this.stream.on('image',Helpers.html_image_display(this.renderImage));
             this.stream.on('image',image => {
                 if (image.result < 0) {
@@ -319,6 +314,15 @@ export default class RealityServerService {
                 this.state.imageRendered.count = this.state.imageRendered.count+1;
                 this.state.imageRendered.data = image;
             });
+
+            await this.stream.start(
+                {
+                    render_loop_name: this.renderLoopName,
+                    image_format: 'jpg',
+                    quality: '100'
+                }
+            );
+
             this.state.status = 'Waiting for first render.';
         } catch (err) {
             this.state.status = `Service error: ${err.toString()}`;
