@@ -59,6 +59,9 @@ export default class RealityServerService {
     /** pick request ID */
     pickRequest = 0;
 
+    /** the render loop stream */
+    stream = undefined;
+
     constructor() {
         this.state = new RealityServerState();
 
@@ -301,20 +304,21 @@ export default class RealityServerService {
         // achieved.
         this.service.default_state_data = new Render_loop_state_data(this.renderLoopName,1,true);
         try {
-            await this.service.stream(
+            this.stream = await this.service.stream(
                 {
                     render_loop_name: this.renderLoopName,
                     image_format: 'jpg',
                     quality: '100'
-                },
-                Helpers.html_image_display(this.renderImage,(data) => {
-                    if (data.result < 0) {
-                        return; // error on render, don't try and show it
-                    }
-                    this.state.imageRendered.count = this.state.imageRendered.count+1;
-                    this.state.imageRendered.data = data;
-                })                
+                }
             );
+            this.stream.on('image',Helpers.html_image_display(this.renderImage));
+            this.stream.on('image',image => {
+                if (image.result < 0) {
+                    return; // error on render, don't try and show it
+                }
+                this.state.imageRendered.count = this.state.imageRendered.count+1;
+                this.state.imageRendered.data = image;
+            });
             this.state.status = 'Waiting for first render.';
         } catch (err) {
             this.state.status = `Service error: ${err.toString()}`;
@@ -333,7 +337,7 @@ export default class RealityServerService {
         reaction(
             () => { return this.camera.matrix },
             matrix => {
-                this.service.update_camera(this.renderLoopName,
+                this.stream.update_camera(
                 {
                     camera_instance: {
                         name: this.cameraInstanceName,
@@ -385,11 +389,15 @@ export default class RealityServerService {
     }
 
     pause_display() {
-        this.service.pause_display(this.renderLoopName);
+        if (this.stream) {
+            this.stream.pause();
+        }
     }
 
     resume_display() {
-        this.service.resume_display(this.renderLoopName);
+        if (this.stream) {
+            this.stream.resume();
+        }
     }
 
     async pick(x,y) {
