@@ -1,5 +1,5 @@
 import { reaction } from 'mobx';
-import { Command,Helpers,Render_loop_state_data,State_data,Service } from 'realityserver-client';
+import { Command,Helpers,State_data,Service } from 'realityserver-client';
 import RSCamera from '../js/RSCamera';
 import RealityServerState from './RealityServerState';
 
@@ -299,10 +299,6 @@ export default class RealityServerService {
 
         this.state.imageRendered.source = this.service.connector_name;
 
-        // Setting the below will switch the default state so that all commands will now be executed on
-        // the render loop. This isn't necessary for this application however this shows how this is
-        // achieved.
-        this.service.default_state_data = new Render_loop_state_data(this.renderLoopName,1,true);
         try {
             this.stream = this.service.create_stream();
 
@@ -315,6 +311,8 @@ export default class RealityServerService {
                 this.state.imageRendered.data = image;
             });
 
+            this.stream.cancel_level = 0;
+            
             await this.stream.start(
                 {
                     render_loop_name: this.renderLoopName,
@@ -378,7 +376,7 @@ export default class RealityServerService {
                     ('1,1,0;' + outlined.join(',')) :
                     '';
                 // set outline and wait until the change appears
-                await this.service.execute_command(
+                await this.stream.execute_command(
                     new Command('render_loop_set_parameter', {
                         render_loop_name: this.renderLoopName,
                         key: 'outline',
