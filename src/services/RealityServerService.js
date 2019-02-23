@@ -1,5 +1,5 @@
 import { reaction } from 'mobx';
-import { Command,Helpers,State_data,Service } from 'realityserver-client';
+import { Command,Command_error,Error as RS_error,Helpers,State_data,Service } from 'realityserver-client';
 import RSCamera from '../js/RSCamera';
 import RealityServerState from './RealityServerState';
 
@@ -129,42 +129,38 @@ export default class RealityServerService {
     }
 
     async import_scene() {
-        // Create a batch command to initialize the application. Batch
-        // commands are useful to process a bunch of commands as if
-        // they were a single command and can simplify certain tasks
-        // and also offer a bit more control in some regards, such as
-        // error handling.
-        let renderers,scene_info;
-        try {
-            const [ renderers_response, scene_response ] = await this.service.queue_commands()
-                .queue(
-                    new Command('get_available_renderers', {}),true
-                )
-                .queue(
-                    new Command('create_scope', { scope_name:this.applicationScope })
-                )
-                .queue(
-                    new Command('create_scope', { parent_scope:this.applicationScope, scope_name:this.userScope })
-                )
-                .queue(
-                    new Command('use_scope', { scope_name:this.applicationScope })
-                )
-                .queue(
-                    new Command('import_scene', { block:true, scene_name:this.sceneName, filename:this.scenePath }),true
-                ).execute();
+        // Queue a series of commands to initialize the application.
+        // We fetch the available renderers, create scopes and import the scene
+        const [ renderers, scene_info ] = await this.service.queue_commands()
+            .queue(
+                new Command('get_available_renderers', {}),true
+            )
+            .queue(
+                new Command('create_scope', { scope_name:this.applicationScope })
+            )
+            .queue(
+                new Command('create_scope', { parent_scope:this.applicationScope, scope_name:this.userScope })
+            )
+            .queue(
+                new Command('use_scope', { scope_name:this.applicationScope })
+            )
+            .queue(
+                new Command('import_scene', { block:true, scene_name:this.sceneName, filename:this.scenePath }),true
+            )
+            .execute()
+            .catch(err => [ err ]);
 
-            if (renderers_response.error) {
-                this.state.status = `Error getting renderers: ${JSON.stringify(renderers_response.error)}`;
-                return;
-            }
-            if (scene_response.error) {
-                this.state.status = `Error loading scene: ${JSON.stringify(scene_response.error)}`;
-                return;
-            }
-            renderers = renderers_response.result;
-            scene_info = scene_response.result;
-        } catch (err) {
+        if (renderers instanceof Command_error) {
+            this.state.status = `Error getting renderers: ${renderers.message}`;
+            return;
+        }
+
+        if (renderers instanceof RS_error) {
             this.state.status = `Service error: ${err.toString()}`;
+            return;
+        }
+        if (scene_info instanceof Command_error) {
+            this.state.status = `Error loading scene: ${scene_info.message}`;
             return;
         }
 
@@ -215,43 +211,42 @@ export default class RealityServerService {
         // Initialize rendering.
         this.state.status = 'Initializing rendering...';
 
-        let camera_info,camera_matrix;
-        try {
-            const [ get_camera_response, get_matrix_response ] = await this.service.queue_commands()
-                .queue(
-                    new Command('localize_element', { element_name:this.cameraInstanceName })
-                )
-                .queue(
-                    new Command('localize_element', { element_name:this.cameraName })
-                )
-                .queue(
-                    new Command('camera_set_aspect', { camera_name:this.cameraName, aspect:(this.imgWidth/this.imgHeight) })
-                )
-                .queue(
-                    new Command('camera_set_resolution', { camera_name:this.cameraName, resolution:{ x:this.imgWidth, y:this.   imgHeight } })
-                )
-                .queue(
-                    new Command('get_camera', { camera_name:this.cameraName }),true
-                )
-                .queue(
-                    new Command('instance_get_world_to_obj', { instance_name:this.cameraInstanceName }),true
-                ).execute();
+        const [ camera_info, camera_matrix ] = await this.service.queue_commands()
+            .queue(
+                new Command('localize_element', { element_name:this.cameraInstanceName })
+            )
+            .queue(
+                new Command('localize_element', { element_name:this.cameraName })
+            )
+            .queue(
+                new Command('camera_set_aspect', { camera_name:this.cameraName, aspect:(this.imgWidth/this.imgHeight) })
+            )
+            .queue(
+                new Command('camera_set_resolution', { camera_name:this.cameraName, resolution:{ x:this.imgWidth, y:this.   imgHeight } })
+            )
+            .queue(
+                new Command('get_camera', { camera_name:this.cameraName }),true
+            )
+            .queue(
+                new Command('instance_get_world_to_obj', { instance_name:this.cameraInstanceName }),true
+            )
+            .execute()
+            .catch(err => [ err ]);
 
-            if (get_camera_response.error) {
-                this.state.status = `Error getting camera: ${JSON.stringify(get_camera_response.error)}`;
-                return;
-            }
-            if (get_matrix_response.error) {
-                this.state.status = `Error loading camera matrix: ${JSON.stringify(get_matrix_response.error)}`;
-                return;
-            }
-            camera_info = get_camera_response.result;
-            camera_matrix = get_matrix_response.result;
-        } catch (err) {
-            this.state.status = `Service error: ${err.toString()}`;
+        if (camera_info instanceof Command_error) {
+            this.state.status = `Error getting camera: ${camera_info.message}`;
             return;
         }
 
+        if (camera_info instanceof RS_error) {
+            this.state.status = `Service error: ${camera_info.toString()}`;
+            return;            
+        }
+
+        if (camera_matrix instanceof Command_error) {
+            this.state.status = `Error loading camera matrix: ${camera_matrix.message}`;
+            return;
+        }
 
         // Update the client side camera representation with
         // initial values from the scene camera.
@@ -265,23 +260,22 @@ export default class RealityServerService {
         this.camera.sceneUpDirection = this.sceneUpVector;
 
         this.state.status = 'Rendering using server side render loop...';
-        try {
-            const [ start_loop_response ] = await this.service.execute_command(
-                new Command('render_loop_start',
-                    {
-                        render_loop_name:this.renderLoopName,
-                        render_loop_handler_name:this.renderLoopHandlerName,
-                        scene_name: this.sceneName,
-                        render_loop_handler_parameters: [ 'renderer', this.state.renderer ],
-                        timeout: this.state.renderLoopExpiryTime
-                    }),{
-                        want_response:true
-                    });
-            if (start_loop_response.error) {
-                this.state.status = 'Creation of render loop failed.';
-                return;
-            }
-        } catch (err) {
+        const [ start_loop_response ] = await this.service.execute_command(
+            new Command('render_loop_start',
+                {
+                    render_loop_name:this.renderLoopName,
+                    render_loop_handler_name:this.renderLoopHandlerName,
+                    scene_name: this.sceneName,
+                    render_loop_handler_parameters: [ 'renderer', this.state.renderer ],
+                    timeout: this.state.renderLoopExpiryTime
+                }),{
+                    want_response:true
+                }).catch(err => [ err ])
+        if (start_loop_response instanceof Command_error) {
+            this.state.status = `Creation of render loop failed ${start_loop_response.message}.`;
+            return;
+        }
+        if (start_loop_response instanceof RS_error) {
             this.state.status = `Service error: ${err.toString()}`;
             return;
         }
@@ -384,7 +378,7 @@ export default class RealityServerService {
                     }),{
                         want_response: false,
                         wait_for_render:true
-                    });
+                    }).catch(e => {});
                 this.resume_display();
             }
         );
@@ -419,7 +413,7 @@ export default class RealityServerService {
                 new Command('render_loop_cancel_render', {
                     render_loop_name: this.renderLoopName
                 })
-            ).execute();
+            ).execute().catch(e => {});
 
         return new Promise((resolve, reject) => {
             // Wait then poll for our pick results on the render loop
@@ -452,19 +446,19 @@ export default class RealityServerService {
             // strange. let's try again later
             setTimeout(() => this.pick_poll_callback(resolve,reject), 1000);
         }
-        if (!resp || resp[0].is_error || resp[0].result !== this.pickRequest) {
+        if (!resp || resp[0] instanceof Command_error || resp[0] !== this.pickRequest) {
             setTimeout(() => this.pick_poll_callback(resolve,reject), 1000);
         } else {
-            let error = resp[1].result;
+            let error = resp[1];
             if (error && error.length > 0) {
                 // picked nothing
                 resolve(undefined);
             } else {
                 let result = [ {
-                    world_point: resp[2].result,
-                    picked_object_name: resp[3].result,
-                    picked_object_instance: resp[4].result[1],
-                    paths: resp[4].result
+                    world_point: resp[2],
+                    picked_object_name: resp[3],
+                    picked_object_instance: resp[4][1],
+                    paths: resp[4]
                 } ];
                 resolve(result);
             }
