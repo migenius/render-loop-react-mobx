@@ -1,5 +1,5 @@
 import { reaction } from 'mobx';
-import { Command,Command_error,Error as RS_error,Helpers,State_data,Service } from 'realityserver-client';
+import { Command,Command_error,Error as RS_error,Utils,State_data,Service } from 'realityserver-client';
 import RSCamera from '../js/RSCamera';
 import RealityServerState from './RealityServerState';
 
@@ -16,7 +16,7 @@ export default class RealityServerService {
     /** The unique user session scope name. User modifications will be
      * made in this scope to make sure changes does not affect other
      * sessions. */
-    userScope = 'user_scope_' + Helpers.create_random_string(8);
+    userScope = 'user_scope_' + Utils.create_random_string(8);
 
     /** The path to the scene to load. */
     scenePath = 'scenes/meyemII.mi';
@@ -48,7 +48,7 @@ export default class RealityServerService {
     imgHeight = 370;
 
     /** The name of the render loop to use */
-    renderLoopName = 'demo_render_loop_' + Helpers.create_random_string();
+    renderLoopName = 'demo_render_loop_' + Utils.create_random_string();
 
     /** Name of the render loop handler to use */
     renderLoopHandlerName = 'default';
@@ -81,7 +81,7 @@ export default class RealityServerService {
             return;
         }
         try {
-            const details = Helpers.extract_url_details(document.location.toString());
+            const details = Utils.extract_url_details(document.location.toString());
             this.state.host = details.host;
             this.state.port = details.port;
             this.state.secure = details.secure;
@@ -296,7 +296,7 @@ export default class RealityServerService {
         try {
             this.stream = this.service.create_stream();
 
-            this.stream.on('image',Helpers.html_image_display(this.renderImage));
+            this.stream.on('image',Utils.html_image_display(this.renderImage));
             this.stream.on('image',image => {
                 if (image.result < 0) {
                     return; // error on render, don't try and show it
