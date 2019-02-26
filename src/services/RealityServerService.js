@@ -1,5 +1,5 @@
 import { reaction } from 'mobx';
-import { Command,Command_error,Error as RS_error,Utils,State_data,Service } from 'realityserver-client';
+import { Command,Command_error,Error as RS_error,Utils,Service } from 'realityserver-client';
 import RSCamera from '../js/RSCamera';
 import RealityServerState from './RealityServerState';
 
@@ -120,7 +120,7 @@ export default class RealityServerService {
             // Uncomment below to enable debug mode where WebSocket commands are
             // sent using text rather than binary. This can be helpful when
             // trying to debug command sequences.
-            //this.service.debug_commands = true;
+            this.service.debug_commands = true;
 
             this.import_scene();
         } else {
@@ -206,7 +206,7 @@ export default class RealityServerService {
         // make sure that all commands are executed in the user scope
         // (unless commands are added with an explicit IState_data
         // instance).
-        this.service.default_state_data = new State_data(null, null, [ new Command('use_scope', { scope_name:this.userScope }) ]);
+        this.service.default_scope_name = this.userScope;
 
         // Initialize rendering.
         this.state.status = 'Initializing rendering...';
