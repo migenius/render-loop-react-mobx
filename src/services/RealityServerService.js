@@ -170,7 +170,16 @@ export default class RealityServerService {
     }
 
     async prepare_scene(renderers,scene_info) {
-        this.state.renderers = renderers;
+        
+        // We don't want to expose all renderers as some require
+        // further configuration to use
+        this.state.renderers = renderers.filter(renderer => 
+            // suppress cloud renderers as they require further config to work
+            // suppress blend as it requires setting up preview/refined renderers
+            // suppress lightmap as it doesn't make sense in a render loop
+            !(renderer.match(/_cloud$/) || renderer == 'blend' || renderer == 'lightmap')
+        );
+
         this.state.renderer = 'iray';
 
         // Extract the name of the camera and camera instance from
