@@ -1,7 +1,7 @@
 /******************************************************************************
  * Copyright 2010-2019 migenius pty ltd, Australia. All rights reserved.
  *****************************************************************************/
-import { Vector4,Matrix4x4 } from 'realityserver-client';
+import { Vector4,Matrix4x4 } from '@migenius/realityserver-client';
 import { observable,computed,action } from 'mobx';
 
 /**
@@ -131,6 +131,7 @@ export default class TransformBase {
         world_to_obj.wz /= scale.z;
         return world_to_obj;
     }
+
     /**
      * Calculates the location, direction and up from the current world_to_obj matrix.
      */

@@ -1,5 +1,5 @@
 import { reaction } from 'mobx';
-import { Command,Command_error,Error as RS_error,Utils,Service } from 'realityserver-client';
+import { Command,Command_error,Error as RS_error,Utils,Service } from '@migenius/realityserver-client';
 import RSCamera from '../js/RSCamera';
 import RealityServerState from './RealityServerState';
 
@@ -87,7 +87,8 @@ export default class RealityServerService {
             this.state.secure = details.secure;
         } catch (err) {
             this.state.status = 'Failed to extract service URL.';
-            this.state.connection_error = ('Service URL: Failed to acquire URL. Original URL: ' + document.location.toString());
+            this.state.connection_error = ('Service URL: Failed to acquire URL. Original URL: ' +
+                                                document.location.toString());
         }
     }
 
@@ -109,14 +110,15 @@ export default class RealityServerService {
             // commands.
             this.service = new Service();
             try {
-                await this.service.connect((this.state.secure ? 'wss://' : 'ws://')+this.state.host+':'+this.state.port+'/service/');
+                await this.service.connect((this.state.secure ? 'wss://' : 'ws://') +
+                                            this.state.host + ':' + this.state.port+'/service/');
             } catch (err) {
                 this.state.status = `Web Socket connection failed: ${err.toString()}`;
                 return;
             }
             this.state.status = 'Web Socket streamer connected, loading scene.';
             this.state.connection_status = 'connected';
-            
+
             // Uncomment below to enable debug mode where WebSocket commands are
             // sent using text rather than binary. This can be helpful when
             // trying to debug command sequences.
@@ -222,7 +224,7 @@ export default class RealityServerService {
                 new Command('camera_set_aspect', { camera_name:this.cameraName, aspect:(this.imgWidth/this.imgHeight) })
             )
             .queue(
-                new Command('camera_set_resolution', { camera_name:this.cameraName, resolution:{ x:this.imgWidth, y:this.   imgHeight } })
+                new Command('camera_set_resolution', { camera_name:this.cameraName, resolution:{ x:this.imgWidth, y:this.imgHeight } })
             )
             .queue(
                 new Command('get_camera', { camera_name:this.cameraName }),true
@@ -240,7 +242,7 @@ export default class RealityServerService {
 
         if (camera_info instanceof RS_error) {
             this.state.status = `Service error: ${camera_info.toString()}`;
-            return;            
+            return;
         }
 
         if (camera_matrix instanceof Command_error) {
@@ -269,8 +271,8 @@ export default class RealityServerService {
                     render_loop_handler_parameters: [ 'renderer', this.state.renderer ],
                     timeout: this.state.renderLoopExpiryTime
                 }),{
-                    want_response:true
-                }).catch(err => [ err ])
+                want_response:true
+            }).catch(err => [ err ]);
         if (start_loop_response instanceof Command_error) {
             this.state.status = `Creation of render loop failed ${start_loop_response.message}.`;
             return;
@@ -306,7 +308,7 @@ export default class RealityServerService {
             });
 
             this.stream.cancel_level = 0;
-            
+
             await this.stream.start(
                 {
                     render_loop_name: this.renderLoopName,
@@ -326,27 +328,31 @@ export default class RealityServerService {
         // Camera navigation is handled by the application level.
         // Here we just watch for the changes to the camera matrx
         // and update it on change.
-        
+
         // React to camera transform change events. This will
         // be triggered any time the camera is modified in such a way
         // that its transform changes.
         reaction(
-            () => { return this.camera.matrix },
+            () => {
+                return this.camera.matrix;
+            },
             matrix => {
                 this.stream.update_camera(
-                {
-                    camera_instance: {
-                        name: this.cameraInstanceName,
-                        transform: matrix
-                    }
-                });
+                    {
+                        camera_instance: {
+                            name: this.cameraInstanceName,
+                            transform: matrix
+                        }
+                    });
             }
         );
 
         // watch the renderer and change to the new renderer when it
         // changes
         reaction(
-            () => { return this.state.renderer },
+            () => {
+                return this.state.renderer;
+            },
             renderer => {
                 this.service.send_command(
                     new Command('render_loop_set_parameter',
@@ -362,7 +368,9 @@ export default class RealityServerService {
         // watch the array of outlined objects and outline the objects
         // when it changes
         reaction(
-            () => { return this.state.outlined.slice() },
+            () => {
+                return this.state.outlined.slice();
+            },
             async outlined => {
                 // Now that we picked something, set the outline parameter to highlight. Format is:
                 //    r,g,b;outline_instance(,outline_instance)*(;(watch_instance)?(,watch_instance)*(;disable_instance(,disable_instance)*)?)?
@@ -378,7 +386,7 @@ export default class RealityServerService {
                     }),{
                         want_response: false,
                         wait_for_render:true
-                    }).catch(e => {});
+                    }).catch(() => {});
                 this.resume_display();
             }
         );
@@ -413,7 +421,7 @@ export default class RealityServerService {
                 new Command('render_loop_cancel_render', {
                     render_loop_name: this.renderLoopName
                 })
-            ).execute().catch(e => {});
+            ).execute().catch(() => {});
 
         return new Promise((resolve, reject) => {
             // Wait then poll for our pick results on the render loop
@@ -424,7 +432,8 @@ export default class RealityServerService {
     async pick_poll_callback(resolve,reject) {
         const queue = this.service.queue_commands();
 
-        [ 'pick_response', 'pick_result_error', 'pick_result_position', 'pick_result_object_name', 'pick_result_path' ].forEach((attr_name) => {
+        [ 'pick_response', 'pick_result_error', 'pick_result_position',
+            'pick_result_object_name', 'pick_result_path' ].forEach((attr_name) => {
             queue.queue(new Command('element_get_attribute', {
                 element_name: this.cameraName,
                 attribute_name: attr_name
