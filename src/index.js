@@ -16,13 +16,12 @@ class RenderLoopDemo extends React.Component {
     }
 
     render() {
-        console.log(this.RS);
         return (
-            <Provider rs_camera_mobx={this.RS.camera}>
+            <Provider rs_state={this.RS.state} rs_camera={this.RS.camera}>
                 <div>
                     <Header />
                     <Content state={this.state} RS={this.RS} />
-                    <Footer state={this.RS.state} />
+                    <Footer />
                 </div>
             </Provider>
         );

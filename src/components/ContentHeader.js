@@ -1,32 +1,50 @@
 import React from 'react';
-import { observer } from 'mobx-react';
+import { observer, inject } from 'mobx-react';
+import PropTypes from 'prop-types';
 
-@observer
-class ContentHeader extends React.Component {
-    constructor(props) {
-        super(props);
+const ContentHeader = ({
+    rs_state,
+    rs_state: {
+        renderer,
+        renderers,
+        connection_status,
+        connection_status_output,
+        secure
     }
+}) => {
+    const rendererChange = (event) => {
+        rs_state.set_render(event.target.value);
+    };
 
-    render() {
-        return (
-            <div id="content_header">
-                <div id="serviceurl">
-                    <span className={`circle ${this.props.RS.state.connection_status}`} /> {this.props.state.connection_status} <span className={this.props.RS.state.secure ? 'lock' : ''} />
-                </div>
-                <div id="renderer">
-                    <span className='status'>Renderer:&nbsp;</span>
-                    <select id="renderer_select" onChange={(e) => this.rendererChange(e)} value={this.props.RS.state.renderer}>
-                        {this.props.RS.state.renderers.map(renderer => <option key={'renderer_' + renderer}>{renderer}</option>)}
-                    </select>
-                </div>
+    return (
+        <div id="content_header">
+            <div id="serviceurl">
+                <span className={`circle ${connection_status}`} />
+                {connection_status_output}
+                <span className={secure ? 'lock' : ''} />
             </div>
-        );
-    }
+            <div id="renderer">
+                <span className='status'>Renderer:&nbsp;</span>
+                <select
+                    id="renderer_select"
+                    onChange={rendererChange}
+                    value={renderer}
+                >
+                    {renderers.map(
+                        renderer =>
+                            <option
+                                key={'renderer_' + renderer}>
+                                {renderer}
+                            </option>
+                    )}
+                </select>
+            </div>
+        </div>
+    );
+};
 
-    rendererChange(event) {
-        this.props.RS.state.renderer = event.target.value;
-    }
+ContentHeader.propTypes = {
+    rs_state: PropTypes.object
+};
 
-}
-
-export default ContentHeader;
+export default inject('rs_state')(observer(ContentHeader));

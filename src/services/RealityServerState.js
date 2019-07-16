@@ -1,4 +1,4 @@
-import { observable } from 'mobx';
+import { observable, computed, action } from 'mobx';
 
 export default class RealityServerState {
 
@@ -21,5 +21,17 @@ export default class RealityServerState {
   version = '4442';
 
   render_loop_expiry_time = 10;
+
+  @computed get connection_status_output() {
+      if (this.connection_error) {
+          return this.connection_error;
+      } else {
+          return this.host ? ('Host: "' + this.host + '" HTTP port: ' + this.port) : 'Not Connected';
+      }
+  }
+
+  @action set_render(render) {
+      this.renderer = render;
+  }
 
 }

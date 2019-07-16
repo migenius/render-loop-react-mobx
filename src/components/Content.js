@@ -20,7 +20,6 @@ class Status extends React.Component {
             return this.last_rs_status;
         }
         return this.last ? this.last_rs_status : this.last_status;
-
     };
 
     constructor(props) {
@@ -46,7 +45,7 @@ class Content extends React.Component {
     render() {
         return (
             <div id="content">
-                <ContentHeader state={this.props.state} RS={this.props.RS} />
+                <ContentHeader />
                 <Render state={this.props.state} RS={this.props.RS} />
                 <Status status={this.props.state.status} rs_status={this.props.state.RS.status} />
             </div>

@@ -42,7 +42,7 @@
   "dependencies": {
     "@migenius/realityserver-client": "^1.0.0",
     "@migenius/realityserver-extras": "^1.0.0",
-    "mobx": "^5.10.0",
+    "mobx": "^5.11.0",
     "mobx-react": "^6.1.1",
     "prop-types": "^15.7.2",
     "react": "^16.8.6",

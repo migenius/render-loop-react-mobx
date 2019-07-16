@@ -30,7 +30,7 @@ class Render extends React.Component {
     }
 
     render() {
-        console.log(this.props.rs_camera_mobx);
+        console.log(this.props.rs_camera);
         return (
             <div id="div_holder">
                 <div id="scene_container">
@@ -143,7 +143,7 @@ class Render extends React.Component {
         const dx = (this.prevX - event.pageX) * this.orbitSpeed;
         const dy = (this.prevY - event.pageY) * this.orbitSpeed;
 
-        this.props.rs_camera_mobx.orbit(dx, dy);
+        this.props.rs_camera.orbit(dx, dy);
 
         this.prevX = event.pageX;
         this.prevY = event.pageY;
@@ -177,7 +177,7 @@ class Render extends React.Component {
             this.props.RS.pause_display();
             const picked = await this.props.RS.pick(click_x, click_y);
             if (picked) {
-                this.props.RS.state.outlined = [ picked[0].picked_object_instance ];
+                this.props.RS.state.outlined = [picked[0].picked_object_instance];
             } else {
                 this.props.RS.state.outlined.clear();
             }
@@ -186,4 +186,4 @@ class Render extends React.Component {
 }
 
 //export default Render;
-export default inject('rs_camera_mobx')(observer(Render));
+export default inject('rs_camera')(observer(Render));

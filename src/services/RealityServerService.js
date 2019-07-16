@@ -425,7 +425,8 @@ export default class RealityServerService {
             },
             async outlined => {
                 // Now that we picked something, set the outline parameter to highlight. Format is:
-                //    r,g,b;outline_instance(,outline_instance)*(;(watch_instance)?(,watch_instance)*(;disable_instance(,disable_instance)*)?)?
+                // r,g,b;outline_instance(,outline_instance)*(;(watch_instance)
+                //?(,watch_instance)*(;disable_instance(,disable_instance)*)?)?
                 const outline =
                     outlined && outlined.length ? '1,1,0;' + outlined.join(',') : '';
                 // set outline and wait until the change appears
