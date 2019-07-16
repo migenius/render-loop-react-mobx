@@ -7,7 +7,7 @@ import { computed } from 'mobx';
 @observer
 class Status extends React.Component {
 
-  @computed get status() {
+    @computed get status() {
         if (this.last_status !== this.props.status) {
             // replacing with stats
             this.last_status = this.props.status;
@@ -23,18 +23,18 @@ class Status extends React.Component {
 
     };
 
-  constructor(props) {
-      super(props);
-      this.last_status = '';
-      this.last_rs_status = '';
-      this.last = 0;
-  }
+    constructor(props) {
+        super(props);
+        this.last_status = '';
+        this.last_rs_status = '';
+        this.last = 0;
+    }
 
-  render() {
-      return (
-          <div id="status"><span className='status'>Status:</span> {this.status}</div>
-      );
-  }
+    render() {
+        return (
+            <div id="status"><span className='status'>Status:</span> {this.status}</div>
+        );
+    }
 }
 
 @observer

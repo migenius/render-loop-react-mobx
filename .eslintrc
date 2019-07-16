@@ -4,38 +4,93 @@
     "browser": true,
     "es6": true
   },
-  "parser": "babel-eslint",
   "parserOptions": {
-    "ecmaVersion": 2017,
-    "sourceType": "module",
-    "ecmaFeatures": {
-        "jsx": true
-    }
+    "ecmaVersion": 6,
+    "sourceType": "module"
   },
   "rules": {
-    "array-bracket-spacing": ["error", "always"],
+    "array-bracket-spacing": [
+      "error",
+      "always"
+    ],
     "block-scoped-var": "warn",
-    "brace-style": ["error", "1tbs"],
+    "brace-style": [
+      "error",
+      "1tbs"
+    ],
     "camelcase": "off",
-    "computed-property-spacing": ["error", "never"],
-    "curly": [ "error", "multi-line" ],
+    "computed-property-spacing": [
+      "error",
+      "never"
+    ],
+    "curly": [
+      "error",
+      "multi-line"
+    ],
     "eol-last": "error",
-    "eqeqeq": ["error", "smart"],
-    "indent": ["error", 4],
-    "max-depth": ["warn", 3],
-    "max-len": ["warn", 120],
-    "max-statements": ["warn", 15],
+    "eqeqeq": [
+      "error",
+      "smart"
+    ],
+    "indent": [
+      "error",
+      4
+    ],
+    "max-depth": "off",
+    "max-len": [
+      "warn",
+      120
+    ],
+    "max-statements": "off",
     "new-cap": "warn",
     "no-extend-native": "error",
     "no-mixed-spaces-and-tabs": "error",
     "no-trailing-spaces": "error",
     "no-unused-vars": "warn",
-    "no-use-before-define": ["error", "nofunc"],
-    "object-curly-spacing": ["error", "always"],
-    "quotes": ["error", "single", "avoid-escape"],
-    "semi": ["error", "always"],
-    "keyword-spacing": ["error", {"before": true, "after": true}],
+    "no-use-before-define": [
+      "error",
+      "nofunc"
+    ],
+    "object-curly-spacing": [
+      "error",
+      "always"
+    ],
+    "prefer-promise-reject-errors": "error",
+    "quotes": [
+      "error",
+      "single",
+      "avoid-escape"
+    ],
+    "semi": [
+      "error",
+      "always"
+    ],
+    "keyword-spacing": [
+      "error",
+      {
+        "before": true,
+        "after": true
+      }
+    ],
+    "key-spacing": "error",
     "space-unary-ops": "error",
-    "no-var": "error"
-  }
+    "no-var": "error",
+    "comma-spacing": [
+      "error",
+      {
+        "before": false,
+        "after": true
+      }
+    ],
+    "react/display-name": [
+      {},
+      {
+        "ignoreTranspilerName": false
+      }
+    ]
+  },
+  "extends": [
+    "plugin:react/recommended"
+  ],
+  "parser": "babel-eslint"
 }

@@ -13,15 +13,13 @@ export default class RealityServerState {
   @observable outlined = [];
 
   /** Updates whenever an image is rendered */
-  @observable imageRendered = {
+  @observable image_rendered = {
       count: 0,
       data: {}
   };
 
   version = '4442';
 
-  renderLoopExpiryTime = 10;
+  render_loop_expiry_time = 10;
 
-  constructor() {
-  }
 }

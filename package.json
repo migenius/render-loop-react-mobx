@@ -31,7 +31,8 @@
     "babel-eslint": "^10.0.1",
     "babel-loader": "^8.0.0",
     "css-loader": "^2.1.0",
-    "eslint": "^5.14.1",
+    "eslint": "^5.16.0",
+    "eslint-plugin-react": "^7.14.2",
     "react-svg-loader": "^2.1.0",
     "style-loader": "^0.23.1",
     "webpack": "^4.29.0",
@@ -40,10 +41,11 @@
   },
   "dependencies": {
     "@migenius/realityserver-client": "^1.0.0",
-    "mobx": "^5.9.0",
-    "mobx-react": "^5.4.3",
-    "mobx-react-devtools": "^6.0.1",
-    "react": "^16.7.0",
-    "react-dom": "^16.4.1"
+    "@migenius/realityserver-extras": "^1.0.0",
+    "mobx": "^5.10.0",
+    "mobx-react": "^6.1.1",
+    "prop-types": "^15.7.2",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6"
   }
 }
