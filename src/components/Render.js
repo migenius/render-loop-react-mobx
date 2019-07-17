@@ -30,7 +30,6 @@ class Render extends React.Component {
     }
 
     render() {
-        console.log(this.props.rs_camera);
         return (
             <div id="div_holder">
                 <div id="scene_container">
@@ -64,52 +63,57 @@ class Render extends React.Component {
 
         // when we have the first image display the render view
         when(
-            () => this.props.RS.state.image_rendered.count === 1,
+            () => this.props.rs_state.image_rendered.count === 1,
             () => (this.showRender = true)
         );
 
         // update render statistics
         autorun(reaction => {
-            if (this.props.RS.state.image_rendered.data) {
-                if (this.props.RS.state.image_rendered.data.result === 1) {
-                    if (this.props.RS.state.image_rendered.source === 'WS') {
-                        this.props.state.status =
-                            'Render converged, waiting for images from web sockets.';
+            console.log(this.props.rs_state);
+            if (this.props.rs_state.image_rendered.data) {
+                if (this.props.rs_state.image_rendered.data.result === 1) {
+                    if (this.props.rs_state.image_rendered.source === 'WS') {
+                        /*this.props.RS.state.status =
+                            'Render converged, waiting for images from web sockets.';*/
+                        this.props.rs_state.set_status('Render converged, waiting for images from web sockets.');
                     } else {
-                        this.props.state.status =
-                            'Render converged, local render loop paused.';
+                        /*this.props.RS.state.status =
+                            'Render converged, local render loop paused.';*/
+                        this.props.rs_state.set_status('Render converged, local render loop paused.');
                     }
                 } else if (
-                    typeof this.props.RS.state.image_rendered.data.statistics !==
+                    typeof this.props.rs_state.image_rendered.data.statistics !==
                     'undefined'
                 ) {
                     let msg;
                     if (
-                        typeof this.props.RS.state.image_rendered.data.statistics
+                        typeof this.props.rs_state.image_rendered.data.statistics
                             .iteration !== 'undefined'
                     ) {
                         msg =
                             'Server pushing images via web sockets (' +
-                            this.props.RS.state.image_rendered.data.statistics.iteration +
+                            this.props.rs_state.image_rendered.data.statistics.iteration +
                             ' iterations)';
-                        if (this.props.RS.state.image_rendered.data.statistics.fps) {
+                        if (this.props.rs_state.image_rendered.data.statistics.fps) {
                             msg +=
                                 ' (' +
-                                this.props.RS.state.image_rendered.data.statistics.fps.toFixed(
+                                this.props.rs_state.image_rendered.data.statistics.fps.toFixed(
                                     2
                                 ) +
                                 ' fps).';
                         } else {
                             msg += '.';
                         }
-                    } else if (this.props.RS.state.image_rendered.data.statistics.fps) {
+                    } else if (this.props.rs_state.image_rendered.data.statistics.fps) {
                         msg =
                             'Fetching renders from server at up to ' +
-                            this.props.RS.state.image_rendered.data.statistics.fps.toFixed(2) +
+                            this.props.rs_state.image_rendered.data.statistics.fps.toFixed(2) +
                             ' fps.';
                     }
                     if (msg) {
-                        this.props.state.status = msg;
+                        //this.props.RS.state.status = msg;
+                        this.props.rs_state.set_status(msg);
+
                     }
                 }
             }
@@ -177,13 +181,13 @@ class Render extends React.Component {
             this.props.RS.pause_display();
             const picked = await this.props.RS.pick(click_x, click_y);
             if (picked) {
-                this.props.RS.state.outlined = [picked[0].picked_object_instance];
+                this.props.rs_state.outlined = [ picked[0].picked_object_instance ];
             } else {
-                this.props.RS.state.outlined.clear();
+                this.props.rs_state.outlined.clear();
             }
         } catch (e) { }
     }
 }
 
 //export default Render;
-export default inject('rs_camera')(observer(Render));
+export default inject('rs_camera', 'rs_state')(observer(Render));
