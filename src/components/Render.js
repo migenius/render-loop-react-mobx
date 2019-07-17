@@ -8,9 +8,9 @@ class Render extends React.Component {
     constructor(props) {
         super(props);
 
-        this.handleMouseDown = this.handleMouseDown.bind(this);
-        this.handleMouseMove = this.handleMouseMove.bind(this);
-        this.handleMouseUp = this.handleMouseUp.bind(this);
+        this.handle_mouse_down = this.handle_mouse_down.bind(this);
+        this.handle_mouse_move = this.handle_mouse_move.bind(this);
+        this.handle_mouse_up = this.handle_mouse_up.bind(this);
 
         /** The number of radians each pixel will rotate the camera.
              * Defaults to dragging the mouse 200 pixels rotate the camera
@@ -96,7 +96,7 @@ class Render extends React.Component {
         });
     }
 
-    handleMouseDown(event) {
+    handle_mouse_down(event) {
         // Reset mouse moved status
         this.setState({
             is_drag: true,
@@ -109,7 +109,7 @@ class Render extends React.Component {
         event.stopPropagation();
     }
 
-    handleMouseMove(event) {
+    handle_mouse_move(event) {
         const { is_drag, prevX, prevY } = this.state;
         if (is_drag) {
             if (event.pageX === prevX && event.pageY === prevY) {
@@ -135,9 +135,9 @@ class Render extends React.Component {
         }
     }
 
-    handleMouseUp(event) {
+    handle_mouse_up(event) {
         if (!this.state.dragged) {
-            this.handleMouseClick(event);
+            this.handle_mouse_click(event);
         }
         this.setState({ dragged: false, is_drag: false });
 
@@ -146,7 +146,7 @@ class Render extends React.Component {
         event.stopPropagation();
     }
 
-    handleMouseClick = async (event) => {
+    handle_mouse_click = async (event) => {
         const { rs_state, RS } = this.props;
         const { current } = this.image_ref;
         const rect = current.getBoundingClientRect();
@@ -175,9 +175,9 @@ class Render extends React.Component {
                     <img
                         ref={this.image_ref}
                         className={this.state.showRender ? 'show' : 'hide'}
-                        onMouseDown={this.handleMouseDown}
-                        onMouseUp={this.handleMouseUp}
-                        onMouseMove={this.handleMouseMove}
+                        onMouseDown={this.handle_mouse_down}
+                        onMouseUp={this.handle_mouse_up}
+                        onMouseMove={this.handle_mouse_move}
                         width="100%"
                         height="100%"
                         src=""
