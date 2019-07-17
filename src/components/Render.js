@@ -1,118 +1,94 @@
 import React from 'react';
-import { observable, autorun, when } from 'mobx';
+import { autorun, when } from 'mobx';
 import { observer } from 'mobx-react';
-import { Vector4 } from '@migenius/realityserver-client';
 import { inject } from 'mobx-react';
-import { reaction } from 'mobx';
+import PropTypes from 'prop-types';
 
-@observer
 class Render extends React.Component {
-    @observable showRender = false;
-
-    /** used to differentiate drag and click */
-    dragged = false;
-
-    /** The number of radians each pixel will rotate the camera.
-     * Defaults to dragging the mouse 200 pixels rotate the camera
-     * 360 degrees. */
-    orbitSpeed = (3.14 * 2) / 200;
-
-    // previous mouse locations
-    prevX = 0;
-    prevY = 0;
-
     constructor(props) {
         super(props);
 
         this.handleMouseDown = this.handleMouseDown.bind(this);
         this.handleMouseMove = this.handleMouseMove.bind(this);
         this.handleMouseUp = this.handleMouseUp.bind(this);
-    }
 
-    render() {
-        return (
-            <div id="div_holder">
-                <div id="scene_container">
-                    <img
-                        ref="image"
-                        className={this.showRender ? 'show' : 'hide'}
-                        onMouseDown={this.handleMouseDown}
-                        width="100%"
-                        height="100%"
-                        src=""
-                        alt="Rendering Scene..."
-                    />
-                </div>
-                <div
-                    className={this.showRender ? 'hide' : 'show'}
-                    ref="loader"
-                    id="loader_container"
-                >
-                    <div id="loader" />
-                </div>
-            </div>
-        );
+        /** The number of radians each pixel will rotate the camera.
+             * Defaults to dragging the mouse 200 pixels rotate the camera
+             * 360 degrees. */
+        this.orbitSpeed = (3.14 * 2) / 200;
+        this.image_ref = React.createRef();
+
+        this.state = {
+            showRender: false,
+            dragged: false, //used to differentiate drag and click
+            is_drag: false, //used to differentiate drag and hover
+            prevX: 0, // previous mouse locations
+            prevY: 0 // previous mouse locations
+        };
     }
 
     componentDidMount() {
+        const { rs_state } = this.props;
+        const { current } = this.image_ref;
+
         this.props.RS.start(
-            this.refs.image,
-            this.refs.image.parentElement.clientWidth,
-            this.refs.image.parentElement.clientHeight
+            current,
+            current.parentElement.clientWidth,
+            current.parentElement.clientHeight
         );
 
         // when we have the first image display the render view
         when(
-            () => this.props.rs_state.image_rendered.count === 1,
-            () => (this.showRender = true)
+            () => rs_state.image_rendered.count === 1,
+            () => (this.setState({ showRender: true }))
         );
 
         // update render statistics
-        autorun(reaction => {
-            console.log(this.props.rs_state);
-            if (this.props.rs_state.image_rendered.data) {
-                if (this.props.rs_state.image_rendered.data.result === 1) {
-                    if (this.props.rs_state.image_rendered.source === 'WS') {
+        autorun(() => {
+            if (rs_state.image_rendered.data) {
+                if (rs_state.image_rendered.data.result === 1) {
+                    if (rs_state.image_rendered.source === 'WS') {
                         /*this.props.RS.state.status =
                             'Render converged, waiting for images from web sockets.';*/
-                        this.props.rs_state.set_status('Render converged, waiting for images from web sockets.');
+                        rs_state.set_status('Render converged, waiting for images from web sockets.');
                     } else {
                         /*this.props.RS.state.status =
+
                             'Render converged, local render loop paused.';*/
-                        this.props.rs_state.set_status('Render converged, local render loop paused.');
+                        rs_state.set_status('Render converged, local render loop paused.');
                     }
                 } else if (
-                    typeof this.props.rs_state.image_rendered.data.statistics !==
+                    typeof rs_state.image_rendered.data.statistics !==
                     'undefined'
                 ) {
                     let msg;
                     if (
-                        typeof this.props.rs_state.image_rendered.data.statistics
+                        typeof rs_state.image_rendered.data.statistics
                             .iteration !== 'undefined'
                     ) {
                         msg =
                             'Server pushing images via web sockets (' +
-                            this.props.rs_state.image_rendered.data.statistics.iteration +
+                            rs_state.image_rendered.data.statistics.iteration +
                             ' iterations)';
-                        if (this.props.rs_state.image_rendered.data.statistics.fps) {
+                        if (rs_state.image_rendered.data.statistics.fps) {
                             msg +=
                                 ' (' +
-                                this.props.rs_state.image_rendered.data.statistics.fps.toFixed(
+                                rs_state.image_rendered.data.statistics.fps.toFixed(
                                     2
                                 ) +
                                 ' fps).';
                         } else {
                             msg += '.';
                         }
-                    } else if (this.props.rs_state.image_rendered.data.statistics.fps) {
+                    } else if (rs_state.image_rendered.data.statistics.fps) {
                         msg =
                             'Fetching renders from server at up to ' +
-                            this.props.rs_state.image_rendered.data.statistics.fps.toFixed(2) +
+                            rs_state.image_rendered.data.statistics.fps.toFixed(2) +
                             ' fps.';
                     }
                     if (msg) {
                         //this.props.RS.state.status = msg;
-                        this.props.rs_state.set_status(msg);
+                        rs_state.set_status(msg);
 
                     }
                 }
@@ -122,13 +98,11 @@ class Render extends React.Component {
 
     handleMouseDown(event) {
         // Reset mouse moved status
-        this.dragged = false;
-
-        this.prevX = event.pageX;
-        this.prevY = event.pageY;
-
-        document.addEventListener('mousemove', this.handleMouseMove);
-        document.addEventListener('mouseup', this.handleMouseUp);
+        this.setState({
+            is_drag: true,
+            prevX: event.pageX,
+            prevY: event.pageY
+        });
 
         // Supress default behaviour
         event.preventDefault();
@@ -136,58 +110,95 @@ class Render extends React.Component {
     }
 
     handleMouseMove(event) {
-        if (event.pageX === this.prevX && event.pageY === this.prevY) {
-            // didn't actually move
-            return false;
+        const { is_drag, prevX, prevY } = this.state;
+        if (is_drag) {
+            if (event.pageX === prevX && event.pageY === prevY) {
+                // didn't actually move
+                return false;
+            }
+
+            // Flag that we have moved
+            const dx = (prevX - event.pageX) * this.orbitSpeed;
+            const dy = (prevY - event.pageY) * this.orbitSpeed;
+
+            this.props.rs_camera.orbit(dx, dy);
+
+            this.setState({
+                prevX: event.pageX,
+                prevY: event.pageY,
+                dragged: true
+            });
+
+            // Supress default behaviour
+            event.preventDefault();
+            event.stopPropagation();
         }
-
-        // Flag that we have moved
-        this.dragged = true;
-
-        const dx = (this.prevX - event.pageX) * this.orbitSpeed;
-        const dy = (this.prevY - event.pageY) * this.orbitSpeed;
-
-        this.props.rs_camera.orbit(dx, dy);
-
-        this.prevX = event.pageX;
-        this.prevY = event.pageY;
-
-        // Supress default behaviour
-        event.preventDefault();
-        event.stopPropagation();
     }
 
     handleMouseUp(event) {
-        if (!this.dragged) {
+        if (!this.state.dragged) {
             this.handleMouseClick(event);
         }
-        document.removeEventListener('mousemove', this.handleMouseMove);
-        document.removeEventListener('mouseup', this.handleMouseUp);
+        this.setState({ dragged: false, is_drag: false });
 
         // Supress default behaviour
         event.preventDefault();
         event.stopPropagation();
     }
 
-    async handleMouseClick(event) {
-        const rect = this.refs.image.getBoundingClientRect();
+    handleMouseClick = async (event) => {
+        const { rs_state, RS } = this.props;
+        const { current } = this.image_ref;
+        const rect = current.getBoundingClientRect();
         const click_x = event.pageX - rect.left;
         const click_y =
-            this.refs.image.parentElement.clientHeight - (event.pageY - rect.top);
-
+            current.parentElement.clientHeight - (event.pageY - rect.top);
         try {
             // pause updates while we pick an object in the scene.
             // display will be resumed once an element is picked and highlighted.
-            this.props.RS.pause_display();
-            const picked = await this.props.RS.pick(click_x, click_y);
+            RS.pause_display();
+            const picked = await RS.pick(click_x, click_y);
             if (picked) {
-                this.props.rs_state.outlined = [ picked[0].picked_object_instance ];
+                rs_state.outlined = [ picked[0].picked_object_instance ];
             } else {
-                this.props.rs_state.outlined.clear();
+                rs_state.outlined.clear();
             }
-        } catch (e) { }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    render() {
+        return (
+            <div id="div_holder">
+                <div id="scene_container">
+                    <img
+                        ref={this.image_ref}
+                        className={this.state.showRender ? 'show' : 'hide'}
+                        onMouseDown={this.handleMouseDown}
+                        onMouseUp={this.handleMouseUp}
+                        onMouseMove={this.handleMouseMove}
+                        width="100%"
+                        height="100%"
+                        src=""
+                        alt="Rendering Scene..."
+                    />
+                </div>
+                <div
+                    className={this.state.showRender ? 'hide' : 'show'}
+                    id="loader_container"
+                >
+                    <div id="loader" />
+                </div>
+            </div>
+        );
     }
 }
 
-//export default Render;
+Render.propTypes = {
+    rs_state: PropTypes.object,
+    RS: PropTypes.object,
+    rs_camera: PropTypes.object
+};
+
 export default inject('rs_camera', 'rs_state')(observer(Render));

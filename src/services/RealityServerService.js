@@ -209,7 +209,7 @@ export default class RealityServerService {
                 )
         );
 
-        this.state.renderer = 'wireframe';
+        this.state.renderer = 'iray';
 
         // Extract the name of the camera and camera instance from
         // the import_scene response. This command is at index 3

@@ -7,8 +7,7 @@ const Status = ({ rs_state: { status } }) =>
         <span className='status'>
             Status: {status}
         </span>
-    </div>
-    ;
+    </div>;
 
 Status.propTypes = {
     rs_state: PropTypes.object
