@@ -2,25 +2,18 @@ import React from 'react';
 import ContentHeader from './ContentHeader';
 import Render from './Render';
 import { observer } from 'mobx-react';
-import { computed } from 'mobx';
 import Status from './Status';
+import PropTypes from 'prop-types';
 
-@observer
-class Content extends React.Component {
-    constructor(props) {
-        super(props);
-    }
+const Content = ({ RS }) =>
+    <div id="content">
+        <ContentHeader />
+        <Render RS={RS} />
+        <Status />
+    </div>;
 
-    render() {
+Content.propTypes = {
+    RS: PropTypes.object
+};
 
-        return (
-            <div id="content">
-                <ContentHeader />
-                <Render RS={this.props.RS} />
-                <Status />
-            </div>
-        );
-    }
-}
-
-export default Content;
+export default observer(Content);

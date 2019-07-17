@@ -2,10 +2,10 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { inject } from 'mobx-react';
 
-const Footer = ({ rs_state }) =>
+const Footer = ({ rs_state: { version } }) =>
     <div id="footer">
         <div id="build_number">
-            {rs_state.version}
+            {version}
         </div>
         <div id="contact">
             <a shape="rect"
@@ -19,8 +19,7 @@ const Footer = ({ rs_state }) =>
                 info@migenius.com
             </a>
         </div>
-    </div>
-    ;
+    </div>;
 
 Footer.propTypes = {
     rs_state: PropTypes.object

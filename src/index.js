@@ -7,24 +7,17 @@ import RealityServerService from './services/RealityServerService';
 import './styles/migenius.css';
 import { Provider } from 'mobx-react';
 
-class RenderLoopDemo extends React.Component {
-    constructor(props) {
-        super(props);
-        this.RS = new RealityServerService();
-        // this.state = new RenderLoopModel(this.RS.state);
-    }
-
-    render() {
-        return (
-            <Provider rs_state={this.RS.state} rs_camera={this.RS.camera}>
-                <div>
-                    <Header />
-                    <Content RS={this.RS} />
-                    <Footer />
-                </div>
-            </Provider>
-        );
-    }
-}
+const RenderLoopDemo = () => {
+    const RS = new RealityServerService();
+    return (
+        <Provider rs_state={RS.state} rs_camera={RS.camera}>
+            <div>
+                <Header />
+                <Content RS={RS} />
+                <Footer />
+            </div>
+        </Provider>
+    );
+};
 
 render(<RenderLoopDemo />, document.getElementById('root'));

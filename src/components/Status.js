@@ -2,10 +2,10 @@ import React from 'react';
 import { observer, inject } from 'mobx-react';
 import PropTypes from 'prop-types';
 
-const Status = (props) =>
+const Status = ({ rs_state: { status } }) =>
     <div id="status">
         <span className='status'>
-            Status: {props.rs_state.status}
+            Status: {status}
         </span>
     </div>
     ;
