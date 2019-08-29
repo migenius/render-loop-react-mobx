@@ -1,7 +1,11 @@
 {
-  "name": "render_loop-mobx-react",
+  "name": "render-loop-mobx-react",
   "version": "1.0.0",
   "description": "The RealityServer Render Loop Demo implemented in React/MobX",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com:migenius/render-loop-react-mobx.git"
+  },
   "scripts": {
     "start": "webpack-dev-server --hot --open",
     "build": "webpack",
