@@ -7,6 +7,7 @@ export default class RealityServerState {
     @observable secure = false;
     @observable renderers = [ 'unknown' ];
     @observable renderer = undefined;
+    @observable version = '';
     @observable status = '';
     @observable connection_error = undefined;
     @observable connection_status = 'pending';
@@ -17,9 +18,7 @@ export default class RealityServerState {
         count: 0,
         data: {}
     };
-
-    version = '4442';
-
+    
     render_loop_expiry_time = 10;
 
     @computed get connection_status_output() {

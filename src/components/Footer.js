@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { inject } from 'mobx-react';
+import { observer, inject } from 'mobx-react';
 
 const Footer = ({ rs_state: { version } }) =>
     <div id="footer">
@@ -25,4 +25,4 @@ Footer.propTypes = {
     rs_state: PropTypes.object
 };
 
-export default inject('rs_state')(Footer);
+export default inject('rs_state')(observer(Footer));

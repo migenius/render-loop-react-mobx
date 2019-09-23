@@ -153,9 +153,10 @@ export default class RealityServerService {
     async import_scene() {
         // Queue a series of commands to initialize the application.
         // We fetch the available renderers, create scopes and import the scene
-        const [ renderers, scene_info ] = await this.service
+        const [ renderers, version, scene_info ] = await this.service
             .queue_commands()
             .queue(new Command('get_available_renderers', {}), true)
+            .queue(new Command('get_version', {}), true)
             .queue(
                 new Command('create_scope', { scope_name: this.application_scope })
             )
@@ -181,8 +182,15 @@ export default class RealityServerService {
             this.state.status = `Error getting renderers: ${renderers.message}`;
             return;
         }
-
+        if (version instanceof Command_error) {
+            this.state.status = `Error getting version: ${version.message}`;
+            return;
+        }
         if (renderers instanceof RS_error) {
+            this.state.status = `Service error: ${err.toString()}`;
+            return;
+        }
+        if (version instanceof RS_error) {
             this.state.status = `Service error: ${err.toString()}`;
             return;
         }
@@ -191,10 +199,7 @@ export default class RealityServerService {
             return;
         }
 
-        this.prepare_scene(renderers, scene_info);
-    }
-
-    async prepare_scene(renderers, scene_info) {
+        // Populate available renderers
         // We don't want to expose all renderers as some require
         // further configuration to use
         this.state.renderers = renderers.filter(
@@ -208,7 +213,14 @@ export default class RealityServerService {
                     renderer === 'lightmap'
                 )
         );
+        
+        // "parse" our the version number from the version string
+        this.state.version = version.split(',')[1].split(' ')[2];
 
+        this.prepare_scene(scene_info);
+    }
+
+    async prepare_scene(scene_info) {
         this.state.renderer = 'iray';
 
         // Extract the name of the camera and camera instance from
