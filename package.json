@@ -11,7 +11,11 @@
     "build": "webpack --env.mode=production",
     "lint": "eslint src"
   },
-  "author": "migenius",
+  "author": "Brendan Hack <brendan@migenius.com>",
+  "contributors": [
+    "Brendan Hack <brendan@migenius.com>",
+    "Neal Shen <neal@migenius.com>"
+  ],
   "license": "ISC",
   "devDependencies": {
     "@babel/core": "^7.0.0",
