@@ -1,27 +1,31 @@
-let path = require('path');
-let webpack = require('webpack');
+const path = require('path');
+const webpack = require('webpack');
+const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 module.exports = env => {
 
-    const envKeys = Object.keys(env).reduce((result, name) => {
-        result[`process.env.${name}`] = JSON.stringify(env[name]);
-        return result;
-    }, {});
+    const envKeys = env ? Object.keys(env).reduce((result, name) => {
+            result[`process.env.${name}`] = JSON.stringify(env[name]);
+            return result;
+        }, {}) : {};
 
     return {
-        devtool: 'eval-source-map',
-        mode: 'development',
+        devtool: 'source-map',
+        mode: env.mode === 'production' ? 'production' : 'development',
         entry: [
             './src/index'
         ],
         output: {
             path: path.join(__dirname, 'dist'),
-            filename: 'bundle.js',
-            publicPath: '/static/'
+            filename: 'bundle.js'
         },
         plugins: [
             new webpack.HotModuleReplacementPlugin(),
-            new webpack.DefinePlugin(envKeys)
+            new webpack.DefinePlugin(envKeys),
+            new HtmlWebpackPlugin({
+                title: 'Render Loop Example Application',
+                template: 'src/index.html'
+            })
         ],
         resolve: {
             extensions: [ '.js', '.jsx' ],

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "webpack-dev-server --hot --open",
-    "build": "webpack",
+    "build": "webpack --env.mode=production",
     "lint": "eslint src"
   },
   "author": "migenius",
@@ -37,6 +37,7 @@
     "css-loader": "^2.1.0",
     "eslint": "^5.16.0",
     "eslint-plugin-react": "^7.14.2",
+    "html-webpack-plugin": "^3.2.0",
     "react-svg-loader": "^3.0.3",
     "style-loader": "^0.23.1",
     "webpack": "^4.29.0",
